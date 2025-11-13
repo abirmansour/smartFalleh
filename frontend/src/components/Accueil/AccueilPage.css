@@ -1,0 +1,78 @@
+body {
+    background-color: rgb(255, 255, 255);
+}
+/* Section principale */
+.accueil-section {
+  width: 109%;
+  height: 110vh;
+  position: relative;
+   margin: 0;
+  padding: 0;
+  
+}
+
+/* Image de fond */
+.accueil-image-container {
+  margin-top: -4%;  
+  width: 122%;
+  height: 88%;
+  margin-left: -11%;
+  overflow: hidden;
+ 
+}
+
+.accueil-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Texte central */
+.accueil-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  width: 100%;
+  padding: 0 1rem;
+  z-index: 10;
+}
+
+.accueil-title {
+  font-size: 2.5rem; /* text-4xl */
+  font-weight: bold;
+  color: white;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.7);
+}
+
+@media (min-width: 768px) {
+  .accueil-title {
+    font-size: 3rem; /* md:text-5xl */
+  }
+}
+
+@media (min-width: 1024px) {
+  .accueil-title {
+    font-size: 3.75rem; /* lg:text-6xl */
+  }
+}
+
+/* Typewriter */
+.typewriter {
+  display: inline;
+  white-space: pre-wrap;
+}
+
+/* Curseur clignotant */
+.cursor {
+  display: inline-block;
+  margin-left: 2px;
+  color: white;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%, 50%, 100% { opacity: 1; }
+  25%, 75% { opacity: 0; }
+}

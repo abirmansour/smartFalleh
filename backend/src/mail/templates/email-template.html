@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Bienvenue sur SmartFalleh 🌾</title>
+    <style>
+      body {
+        font-family: "Poppins", Arial, sans-serif;
+        background-color: #f5f9f5;
+        margin: 0;
+        padding: 0;
+      }
+
+      .container {
+        background: #fff;
+        max-width: 600px;
+        margin: 40px auto;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        padding: 30px;
+        border-top: 6px solid #4caf50;
+      }
+
+      .header {
+        text-align: center;
+      }
+
+      .header h2 {
+        color: #388e3c;
+      }
+
+      .content {
+        margin-top: 20px;
+        font-size: 16px;
+        color: #333;
+        line-height: 1.6;
+      }
+
+      .btn {
+        display: inline-block;
+        margin: 20px 10px;
+        padding: 12px 24px;
+        background-color: #4caf50;
+        color: white;
+        text-decoration: none;
+        border-radius: 6px;
+        font-weight: bold;
+      }
+
+      .btn-secondary {
+        background-color: #2e7d32;
+      }
+
+      .footer {
+        margin-top: 30px;
+        text-align: center;
+        font-size: 13px;
+        color: #777;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h2>🌾 Bienvenue sur SmartFalleh</h2>
+      </div>
+      <div class="content">
+        <p>Bonjour 👋,</p>
+        <p>
+          Votre compte a été créé avec succès sur la plateforme SmartFalleh.
+          Veuillez choisir une action ci-dessous :
+        </p>
+
+        <p style="text-align: center;">
+          <a href="{{linkReset}}" class="btn">🔐 Définir le mot de passe</a>
+          <a href="{{linkSite}}" class="btn btn-secondary">🌿 Accéder au site</a>
+        </p>
+
+        <p style="color: #666; font-size: 14px;">
+          ⚠️ Ce lien est valable pendant <strong>1 heure</strong>.
+        </p>
+      </div>
+
+      <div class="footer">
+        © 2025 SmartFalleh - Cultivons l’avenir ensemble 🌱
+      </div>
+    </div>
+  </body>
+</html>

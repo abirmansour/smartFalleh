@@ -1,0 +1,300 @@
+/* ===== Container ===== */
+.jury-container {
+  padding: 1rem 3rem ; /* أكبر padding أفقي */
+  /* margin-top: -26px; */
+  min-height: 100vh;
+  width: 99%;
+  margin-left: -31px;
+}
+.jury-header-section {
+  background-color: #f3f2ee;
+  text-align: center;
+  padding: 100px 20px 80px;
+  margin-bottom: 30px;
+  width: 95%;
+}
+
+.jury-header-section .breadcrumb {
+  color: #7b7b7b;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.jury-header-section .main-title {
+  font-size: 65px;
+  color: #2d4c2a;
+  font-family: "Times New Roman", serif;
+  margin: 0;
+}
+
+.header-section .subtitle {
+  color: #2d4c2a;
+  font-size: 22px;
+  margin-top: 10px;
+  font-weight: 400;
+}
+/* ===== Header ===== */
+.jury-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+  color: #1fa6a3;
+  width: 98.5%;
+  justify-content: end;
+}
+
+.jury-header h2 {
+  color: #2d4c2a;
+  font-weight: 600;
+}
+
+/* ===== Grid ===== */
+.jury-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 20px;
+}
+
+/* ===== Card ===== */
+.jury-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.jury-card:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 16px rgba(45, 76, 42, 0.25);
+  background: #f0f7ee;
+}
+
+/* ===== Avatar ===== */
+.jury-avatar {
+  flex-shrink: 0;
+  width: 50px;
+  height: 50px;
+  margin-right: 15px;
+}
+
+.jury-initials {
+  width: 50px;
+  height: 50px;
+  background: #ffd66b;
+  color: #2d4c2a;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+/* ===== Info ===== */
+.name-row {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 5px;
+}
+
+.nom, .prenom {
+  font-weight: 600;
+  color: #444;
+}
+
+.jury-email, .jury-tel, .jury-adr {
+  font-size: 13px;
+  color: #555;
+  margin: 2px 0;
+}
+
+/* ===== Menu Dropdown ===== */
+.menu-container {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+.menu-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #666;
+}
+
+.menu-dropdown {
+  position: absolute;
+  top: 25px;
+  right: 0;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  overflow: hidden;
+  z-index: 10;
+}
+
+.menu-item {
+  display: block;
+  padding: 0.7rem 1.2rem;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font-size: 0.9rem;
+  color: #444;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.menu-item:hover {
+  background-color: #ffd66b;
+  color: #2d4c2a;
+}
+
+.menu-item.delete:hover {
+  background-color: #f9d1d1;
+  color: #c00;
+}
+
+/* ===== Modal ===== */
+/* ====== MODAL GENERAL ====== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: #fff;
+  border-radius: 12px;
+  padding: 2.2rem;
+  width: 90%;
+  max-width: 480px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ====== TITRE ====== */
+.modal h3 {
+  text-align: center;
+  color: #2d4c2a;
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin-bottom: 1.8rem;
+}
+
+/* ====== INPUTS ====== */
+.modal-formJ input {
+  width: 92%;
+  padding: 0.66rem 20px;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  margin-bottom: 0.5rem;
+  color: #464646;
+  background-color:aliceblue;
+  font-size: 1rem;
+  transition: border 0.2s ease, box-shadow 0.2s ease;
+}
+
+.modal-formJ input:focus {
+  border-color: #2d4c2a;
+  background-color: #fff;
+  box-shadow: 0 0 0 3px rgba(45, 76, 42, 0.15);
+  outline: none;
+}
+
+/* ====== DOUBLE INPUT ROW ====== */
+.form-row {
+  display: flex;
+  gap: 10px;
+}
+
+.form-row input {
+  flex: 1;
+}
+
+/* ====== ACTION BUTTONS ====== */
+.modal-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1rem;
+}
+
+.save-btn,
+.cancel-btn {
+  border: none;
+  padding: 0.75rem 1.6rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+/* ====== Green Save ====== */
+.save-btn {
+  background-color: #2e9e65;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(46, 158, 101, 0.3);
+}
+
+.save-btn:hover {
+  background-color: #248752;
+  box-shadow: 0 6px 14px rgba(46, 158, 101, 0.35);
+  transform: translateY(-1px);
+}
+
+/* ====== Red Cancel ====== */
+.cancel-btn {
+  background-color: #e74c3c;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+}
+
+.cancel-btn:hover {
+  background-color: #d7372b;
+  box-shadow: 0 6px 14px rgba(231, 76, 60, 0.35);
+  transform: translateY(-1px);
+}
+
+/* ====== RESPONSIVE ====== */
+@media (max-width: 480px) {
+  .form-row {
+    flex-direction: column;
+  }
+
+  .modal {
+    padding: 1.5rem;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .save-btn,
+  .cancel-btn {
+    width: 100%;
+  }
+}

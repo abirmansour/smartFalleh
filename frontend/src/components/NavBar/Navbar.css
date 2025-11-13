@@ -1,0 +1,379 @@
+/* Container global
+.navbar-container {
+  width: 88%;
+  position: fixed;
+  height: 15%;
+  top: 0;
+  left: 0;
+  z-index: 50;
+  background-color: rgb(255, 255, 255);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  border-radius: 110px;
+  transition: all 0.3s ease;
+  margin: 1%;
+  margin-left: 90px;
+}
+
+/* Inner wrapper */
+/*
+.navbar-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+  height: 95px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+
+.navbar-logo {
+  font-size: 1.5rem;
+  font-weight: bold;
+  cursor: pointer;
+  margin-left: 70px;
+}
+
+
+.navbar-desktop {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.navbar-links {
+  display: flex;
+  gap: 20px;
+}
+
+.navbar-link {
+  cursor: pointer;
+  text-decoration: none;
+  color: #4B5563; 
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.navbar-link:hover {
+  color: #679330;
+  font-weight: 600;
+}
+
+.active-link {
+  color: #679330;
+  font-weight: 600;
+}
+
+
+.navbar-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  color: #374151; 
+}
+
+.btn-logout,
+.btn-login,
+.btn-signup {
+  padding: 8px 16px;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-logout {
+  background-color: #EF4444; 
+  color: white;
+}
+
+.btn-logout:hover {
+  background-color: #DC2626; 
+}
+
+.btn-login {
+  background-color: #C19A6B;
+  color: white;
+}
+
+.btn-login:hover {
+  background-color: #A6825A;
+}
+
+.btn-signup {
+  background-color: #007F3F;
+  color: white;
+}
+
+.btn-signup:hover {
+  background-color: #5a7f29;
+}
+
+
+.navbar-mobile-btn {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .navbar-desktop {
+    display: none;
+  }
+
+  .navbar-mobile-btn {
+    display: block;
+  }
+
+  .navbar-mobile-menu {
+    background-color: white;
+    max-width: 1200px;
+    margin: 10px auto 0;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+
+  .navbar-mobile-menu nav {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mobile-link {
+    padding: 12px 20px;
+    color: #374151;
+    text-decoration: none;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+
+  .mobile-link:hover,
+  .active-link {
+    color: #679330;
+    font-weight: 600;
+  }
+
+  .btn-logout-mobile,
+  .btn-login-mobile,
+  .btn-signup-mobile {
+    width: 100%;
+    margin-top: 4px;
+    padding: 12px 0;
+    border-radius: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+  }
+
+  .btn-logout-mobile {
+    background-color: #EF4444;
+    color: white;
+  }
+
+  .btn-login-mobile {
+    background-color: #C19A6B;
+    color: white;
+  }
+
+  .btn-signup-mobile {
+    background-color: #007F3F;
+    color: white;
+  }
+
+  .btn-logout-mobile:hover { background-color: #DC2626; }
+  .btn-login-mobile:hover { background-color: #A6825A; }
+  .btn-signup-mobile:hover { background-color: #5a7f29; }
+} 
+*/
+/* ===== NAVBAR FIXED STICKY ===== */
+.navbar-container {
+  width: 88%;
+  position: fixed;
+  height: 12%;
+  top: 0;
+  left: 0;
+  z-index: 50;
+  background-color: rgb(255, 255, 255);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  border-radius: 110px;
+  transition: all 0.3s ease;
+  margin: 1%;
+  margin-left: 90px;
+  margin-top: 15px;
+}
+
+/* Inner container */
+.navbar-inner {
+  max-width: 1200px;
+  margin-top: -6px;
+  padding: 0 20px;
+  height: 95px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Logo */
+.navbar-logo {
+  font-size: 1.5rem;
+  font-weight: bold;
+  cursor: pointer;
+  margin-left: 70px;
+}
+
+/* Desktop links */
+.navbar-desktop {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.navbar-links {
+  display: flex;
+  gap: 20px;
+}
+
+.navbar-link {
+  cursor: pointer;
+  text-decoration: none;
+  color: #4B5563;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.navbar-link:hover {
+  color: #679330;
+  font-weight: 600;
+}
+
+.active-link {
+  color: #679330;
+  font-weight: 600;
+}
+
+/* Buttons */
+.btn-login, .btn-signup, .btn-logout {
+  border-radius: 9999px;
+  padding: 8px 27px;
+  font-weight: 500;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.btn-login {
+  background: #C19A6B;
+}
+.btn-login:hover {
+  background: #A6825A;
+}
+
+.btn-signup {
+  background: #007F3F;
+}
+.btn-signup:hover {
+  background: #5a7f29;
+}
+
+.btn-logout {
+  background: #EF4444;
+}
+.btn-logout:hover {
+  background: #DC2626;
+}
+
+/* ===== MOBILE ===== */
+.navbar-mobile-btn {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .navbar-desktop {
+    display: none;
+  }
+
+  .navbar-mobile-btn {
+    display: block;
+  }
+
+  .navbar-mobile-menu {
+    width: 100%;
+    background-color: white;
+    border-radius: 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+
+  .mobile-link {
+    padding: 12px 20px;
+    display: block;
+    color: #374151;
+    text-decoration: none;
+  }
+
+  .mobile-link:hover,
+  .active-link {
+    color: #679330;
+    font-weight: 600;
+  }
+
+  .btn-login-mobile, .btn-logout-mobile {
+    width: 100%;
+    padding: 12px 0;
+    border: none;
+    color: #fff;
+    font-weight: 500;
+    border-radius: 0;
+  }
+
+  .btn-login-mobile { background: #C19A6B; }
+  .btn-login-mobile:hover { background: #A6825A; }
+
+  .btn-logout-mobile { background: #EF4444; }
+  .btn-logout-mobile:hover { background: #DC2626; }
+}
+
+/* ===== MODAL OVERLAY ===== */
+.modal-overlay {
+  position: fixed;
+  top: 0; /* يبدأ من فوق الصفحة */
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.15); /* شفافية خفيفة */
+  backdrop-filter: blur(8px); /* التأثير flou */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 200; /* فوق النّافبار */
+}
+
+.modal-content {
+  background-color: white;
+  border-radius: 16px;
+  padding: 30px;
+  box-shadow: 0 4px 30px rgba(0,0,0,0.3);
+  max-width: 480px;
+  width: 90%;
+  position: relative;
+}
+.btn-demande {
+  background-color: #198754;
+  color: white;
+  border: none;
+  border-radius: 9999px;
+  padding: 8px 27px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-right: 10px;
+  margin-left: 60px;
+}
+
+.btn-demande:hover {
+  background-color: #157347;
+}
+

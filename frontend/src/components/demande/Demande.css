@@ -1,0 +1,174 @@
+/* ======= CONTAINER ======= */
+.demande-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(3px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+
+/* ======= CARD ======= */
+.demande-card {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 36px 40px;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.15);
+  max-width: 880px;
+  width: 100%;
+  position: relative;
+  box-sizing: border-box;
+  animation: fadeZoom 0.4s ease;
+}
+
+/* ======= ANIMATION ======= */
+@keyframes fadeZoom {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ======= CLOSE BUTTON ======= */
+.demande-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.demande-close {
+  background: none;
+  border: none;
+  font-size: 26px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: color 0.2s ease, transform 0.1s ease;
+}
+
+.demande-close:hover {
+  color: #007f3f;
+  transform: scale(1.1);
+}
+
+.close-btn:hover {
+  color: #000;
+}
+
+/* ======= HEADING ======= */
+.demande-heading {
+  text-align: center;
+  font-size: 28px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 28px;
+}
+
+/* ======= ERROR ======= */
+.demande-error {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 15px;
+}
+
+/* ======= GRID ======= */
+.demande-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px 22px;
+}
+
+/* ======= INPUTS ======= */
+.demande-input {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  font-size: 15px;
+  color: #111827;
+  height: 52px;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.demande-input:focus {
+  outline: none;
+  border-color: #198754;
+  box-shadow: 0 0 0 4px rgba(25, 135, 84, 0.15);
+}
+
+/* ======= SELECT ======= */
+.demande-input.select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, #4b5563 50%),
+                    linear-gradient(135deg, #4b5563 50%, transparent 50%);
+  background-position: calc(100% - 20px) calc(1em + 4px),
+                      calc(100% - 15px) calc(1em + 4px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 40px;
+}
+
+/* ======= BUTTON ======= */
+.demande-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 26px;
+}
+
+.demande-submit {
+  background-color: #198754;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 36px;
+  font-weight: 600;
+  font-size: 16px;
+  box-shadow: 0 8px 18px rgba(25, 135, 84, 0.25);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.demande-submit:hover {
+  background-color: #157347;
+  transform: translateY(-2px);
+}
+
+.demande-submit:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* ======= RESPONSIVE ======= */
+@media (max-width: 800px) {
+  .demande-card {
+    padding: 24px;
+    max-width: 94%;
+  }
+  .demande-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .demande-heading {
+    font-size: 22px;
+  }
+  .demande-submit {
+    width: 100%;
+  }
+}

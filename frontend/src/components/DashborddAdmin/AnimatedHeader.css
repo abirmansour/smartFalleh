@@ -1,0 +1,98 @@
+.animated-header {
+  width: 100%;
+  height: 520px; /* غيّره حسب اللي تحب */
+  position: relative;
+  overflow: hidden;
+  border-radius: 10px;
+  margin-bottom: 1.5rem;
+  background: #000;
+  display: block;
+  box-shadow: 0 6px 30px rgba(0,0,0,0.12);
+  perspective: 1200px; /* مهم للـ 3D tilt */
+}
+
+/* stage holds stacked slides (absolute) */
+.slide-stage {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+/* each slide is absolute and covers stage */
+.slide {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center center;
+  transform-origin: center center;
+  will-change: transform, filter;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding-left: 6%;
+  box-sizing: border-box;
+   height: 100%;
+}
+
+/* semi overlay to darken image a bit for text legibility */
+.overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0.15), rgba(0,0,0,0.25));
+  pointer-events: none;
+}
+
+/* text block */
+.slide-text {
+  position: relative;
+  z-index: 1;
+  max-width: 60%;
+  color: #fff;
+  text-shadow: 0 8px 30px rgba(0,0,0,0.45);
+}
+
+.slide-text h1 {
+  font-size: clamp(32px, 7vw, 76px); /* responsive big headline */
+  line-height: 0.92;
+  margin: 0 0 18px 0;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+/* button */
+.btn-start{
+  display: inline-block;
+  background: #b36b46;
+  color: #fff;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 3px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(179,107,70,0.18);
+}
+
+/* dots bottom center */
+.dots {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  z-index: 5;
+}
+.dot {
+  width: 8px;
+  height: 8px;
+  background: rgba(255,255,255,0.45);
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+
+/* responsive tweaks */
+@media (max-width: 768px) {
+  .animated-header { height: 300px; }
+  .slide-text { max-width: 80%; }
+  .slide-text h1 { font-size: clamp(22px, 9vw, 48px); }
+}

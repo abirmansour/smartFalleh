@@ -1,0 +1,438 @@
+.list-agriculteur-container {
+  padding: 1rem 3rem ; /* أكبر padding أفقي */
+  /* margin-top: -26px; */
+  min-height: 100vh;
+  width: 99%;
+  padding: 20px;
+  font-family: "Poppins", sans-serif;
+}
+.agricul-header-section {
+  background-color: #f3f2ee;
+  text-align: center;
+  padding: 100px 20px 80px;
+  margin-bottom: 30px;
+  width: 95%;
+}
+
+.agricul-header-section .breadcrumbAG {
+  color: #7b7b7b;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.agricul-header-section .main-titleAG {
+  font-size: 65px;
+  color: #2d4c2a;
+  font-family: "Times New Roman", serif;
+  margin: 0;
+}
+
+.header-section .subtitle {
+  color: #2d4c2a;
+  font-size: 22px;
+  margin-top: 10px;
+  font-weight: 400;
+}
+.list-agriculteur-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.list-agriculteur-header h2 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #065f46;
+}
+
+
+
+.add-btn:hover {
+  background-color: #059669;
+}
+
+/* الآن نخلي الكروت تاخذ عرض الصفحة */
+
+.list-agriculteur-card:hover {
+  transform: translateY(-5px);
+}
+.card-content {
+  padding: 55px 20px 20px; /* يبدأ بعد الصورة مباشرة */
+  text-align: center;
+}
+.card-content h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #064e3b;
+}
+.status-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.3rem 0.6rem;
+  border-radius: 0.5rem;
+}
+
+.status-badge.active {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-badge.inactive {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.profile-img {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 0.8rem;
+}
+
+.list-agriculteur-card h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #064e3b;
+  margin-bottom: 0.2rem;
+}
+
+.role {
+  color: #9ca3af;
+  font-size: 0.9rem;
+  margin-bottom: 0.8rem;
+}
+
+/* Info Box */
+.info-box {
+  background: #f9fafb;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 15px;
+  text-align: left;
+  
+}
+
+.info-row {
+ display: flex;
+  justify-content: space-between;
+  
+  font-size: 14px;
+  color: #374151;
+}
+
+.info-row span {
+  color: #555;
+  font-weight: 500;
+}
+
+.email-text {
+  word-break: break-all; /* ✅ évite les débordements d'email longs */
+  text-align: right;
+  max-width: 180px;
+}
+
+
+/* Modal */
+.modal-overlayAG {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
+
+.modal h3 {
+  margin-bottom: 1rem;
+  color: #065f46;
+  font-weight: 600;
+}
+
+
+
+
+.modal-actions button {
+  background-color: #10b981;
+  color: white;
+  border: none;
+  padding: 0.1rem 1rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+
+
+.modal-actions button:nth-child(2) {
+  background-color: #ef4444;
+}
+.action-buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 15px;
+}
+
+.edit-btn,
+.delete-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.edit-btn {
+  background-color: #e0c097; /* beige */
+  color: #4e342e;
+  margin-right: 8px;
+}
+
+.edit-btn:hover {
+  background-color: #d6b48c;
+}
+
+.delete-btn {
+  background-color: #dedede; /* gris */
+  color: #333;
+}
+
+.delete-btn:hover {
+  background-color: #dedede;
+}
+
+
+
+
+
+
+
+.add-btn-agri {
+  background-color: #3da35d;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 15px;
+  cursor: pointer;
+  font-weight: bold;
+  margin-left: 10%;
+}
+.agri-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+  color: #1fa6a3;
+  width: 98.5%;
+  justify-content: end;
+  
+}
+.add-btn:hover {
+  background-color: #2f7a42;
+}
+
+
+
+
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  display: inline-block;
+  margin-bottom: 5px;
+}
+.status-badge.active {
+  background-color: #d4f8d4;
+  color: #2f7a42;
+}
+.status-badge.inactive {
+  background-color: #fcdada;
+  color: #b91c1c;
+}
+
+/* 🧾 Modal */
+.modal-overlayAG {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+
+
+.modalAG input {
+  width: 92%;
+  padding: 0.66rem 1rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  margin-bottom: 0.5rem;
+  color: #464646;
+  background-color:aliceblue;
+  font-size: 1rem;
+  transition: border 0.2s ease, box-shadow 0.2s ease;
+}
+
+
+
+.modal-actions button {
+  border: none;
+  padding: 8px 15px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+
+/* 🟣 Background image en haut du card */
+.card-top {
+  position: relative;
+  height: 90px; 
+  /* background-image: url("https://images.unsplash.com/photo-1571509107684-7e3034a90012?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=686"); */
+  background-color: #059669;
+  background-size: cover; 
+  background-position: center;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  width: 300px;
+}
+.list-agriculteur-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 15px;
+}
+
+.list-agriculteur-card {
+  background-color: #fff;
+  border: 1px solid #e5e5e5; /* ✅ border doux et propre */
+  border-radius: 8px;
+  width: 300px;
+  
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.avatar-wrapper {
+  position: absolute;
+  bottom: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.avatar-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 3px solid #fdcd3d;
+  background-color: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  
+}
+
+.avatar-circle img {
+  width: 45%;
+  height: 45%;
+  object-fit: contain;
+  filter: brightness(0) saturate(100%) invert(25%) sepia(72%) saturate(600%) hue-rotate(90deg) brightness(85%) contrast(85%);
+}
+
+
+
+.modalAG {
+  background: #ffffff;
+  padding: 2rem;
+  border-radius: 1rem;
+  width: 420px;
+  box-shadow: 0 4px 25px rgba(0, 0, 0, 0.15);
+  font-family: "Poppins", sans-serif;
+  animation: fadeIn 0.3s ease;
+}
+
+.modalAG h3 {
+  margin-bottom: 1rem;
+  color: #2f7a42;
+  font-weight: 600;
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+
+/* ✅ كل label فوق الـ input */
+.form-groupAG {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-groupAG label {
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+  color: #1f064e;
+  font-weight: 500;
+}
+
+.form-groupAG input {
+ 
+}
+
+.form-groupAG input:focus {
+ border-color: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
+  outline: none;
+}
+
+/* ✅ زرّين بمظهر احترافي */
+.modal-actions {
+  display: flex;
+  justify-content: space-between;
+}
+
+.save-btn {
+  background-color: #3da35d;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.25s ease;
+}
+
+.save-btn:hover {
+  background-color: #2f7a42;
+}
+
+.cancel-btn {
+  background-color: #e5e7eb;
+  color: #374151;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.25s ease;
+}
+
+.cancel-btn:hover {
+  background-color: #d1d5db;
+}
+
+/* ✅ Animation لطيفة للنافذة */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

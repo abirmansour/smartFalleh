@@ -1,0 +1,21 @@
+.footer-container {
+  width: 121%;
+  height: 60px;
+  background-color: #1E3917;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.footer-inner {
+  width: 90%;
+  max-width: 1200px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.footer-text {
+  color: white;
+  font-size: 0.9rem;
+}

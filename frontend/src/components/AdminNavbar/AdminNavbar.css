@@ -1,0 +1,68 @@
+.admin-navbar-container {
+  background-color: #f3fff9;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05); /* ظل خفيف */
+  width: 191%;
+}
+
+.admin-navbar-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.admin-navbar-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #065f46;
+}
+
+.admin-navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.admin-navbar-search-box {
+  display: flex;
+  align-items: center;
+  background-color: #f9fafb;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  padding: 0.25rem 0.75rem;
+}
+
+.admin-navbar-search-box input {
+  border: none;
+  outline: none;
+  padding: 0.25rem 0.5rem;
+  background: transparent;
+  font-size: 0.9rem;
+}
+
+.admin-navbar-search-icon {
+  color: #6b7280;
+}
+
+.admin-navbar-notification-icon {
+  position: relative;
+  cursor: pointer;
+  color: #065f46;
+}
+
+.admin-navbar-notif-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background-color: #dc2626;
+  color: white;
+  font-size: 0.65rem;
+  border-radius: 9999px;
+  padding: 2px 4px;
+}
+
+.admin-navbar-user {
+  font-weight: 500;
+  color: #065f46;
+}

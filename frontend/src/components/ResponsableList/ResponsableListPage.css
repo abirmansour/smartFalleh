@@ -1,0 +1,213 @@
+/* ===== Section d'en-tête ===== */
+.resp-container {
+  padding: 1rem 3rem ; /* أكبر padding أفقي */
+  /* margin-top: -26px; */
+  min-height: 100vh;
+  width: 99%;
+}
+.resp-header-section {
+  background-color: #f3f2ee;
+  text-align: center;
+  padding: 100px 20px 80px;
+  margin-bottom: 30px;
+  width: 95%;
+}
+.resp-initials {
+  width: 50px;
+  height: 50px;
+  background: #ffd66b;
+  color: #2d4c2a;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+.name-row {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 5px;
+}
+
+.nom, .prenom {
+  font-weight: 600;
+  color: #444;
+}
+
+.jury-email, .jury-tel, .jury-adr {
+  font-size: 13px;
+  color: #555;
+  margin: 2px 0;
+}
+
+.resp-header-section .breadcrumb {
+  color: #7b7b7b;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.resp-header-section .main-title {
+  font-size: 65px;
+  color: #2d4c2a;
+  font-family: "Times New Roman", serif;
+  margin: 0;
+}
+
+.header-section .subtitleAG {
+  color: #2d4c2a;
+  font-size: 22px;
+  margin-top: 10px;
+  font-weight: 400;
+}
+/* ===== Contenu principal ===== */
+.resp-container {
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+.resp-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+  color: #1fa6a3;
+  width: 98.5%;
+  justify-content: end;
+}
+
+.resp-add-btn {
+  background-color: #3da35d;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 15px;
+  cursor: pointer;
+  font-weight: bold;
+  margin-left: 10%;
+}
+
+.resp-grid {
+ display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 20px;
+}
+
+.resp-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.resp-card:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 16px rgba(45, 76, 42, 0.25);
+  background: #f0f7ee;
+}
+.resp-avatar {
+ flex-shrink: 0;
+  width: 50px;
+  height: 50px;
+  margin-right: 15px;
+}
+
+.resp-info .name-row {
+  display: flex;
+  gap: 5px;
+  font-weight: bold;
+  color: #1fa6a3;
+}
+
+.menu-container {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+.menu-btn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.menu-dropdown {
+  position: absolute;
+  right: 0;
+  top: 25px;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  overflow: hidden;
+  z-index: 10;
+}
+
+.menu-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+}
+
+.menu-item:hover {
+  background-color: #f0f0f0;
+}
+
+.menu-item.delete {
+  color: red;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal {
+  background-color: white;
+  padding: 20px;
+  border-radius: 10px;
+  width: 400px;
+}
+
+.modal form input,
+.modal form select {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 10px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: space-between;
+}
+
+.save-btn {
+  background-color: #1fa6a3;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.cancel-btn {
+  background-color: #ccc;
+  color: black;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+}
