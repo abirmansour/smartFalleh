@@ -29,26 +29,28 @@ pipeline {
         TESTRAIL_SUITE_ID = '1'
     }
     
-    stages {
+   stages {
         stage('Checkout') {
             steps {
                 checkout scm
             }
         }
         
-        stage('Verify Node.js Installation') {
+        stage('Verify Setup') {
             steps {
                 sh '''
                     echo "=== Node.js Version ==="
                     node --version
                     echo "=== npm Version ==="
                     npm --version
+                    echo "=== Docker Version ==="
+                    docker --version || echo "Docker not available"
                     echo "=== Project Structure ==="
                     ls -la
                 '''
             }
         }
-        
+
         stage('Install Dependencies') {
             parallel {
                 stage('Backend Dependencies') {
