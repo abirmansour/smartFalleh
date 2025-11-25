@@ -91,110 +91,106 @@ pipeline {
             }
         }
 
-        stage('Run Tests') {
-            parallel {
-                stage('Backend Tests') {
-                    steps {
-                        dir('backend') {
-                            script {
-                                withCredentials([usernamePassword(
-                                    credentialsId: 'jenkins_testrail',
-                                    usernameVariable: 'TESTRAIL_USER',
-                                    passwordVariable: 'TESTRAIL_API_KEY'
-                                )]) {
-                                    sh '''
-                                        echo "Testing TestRail connection..."
-                                        curl -s -X GET \
-                                          -H "Content-Type: application/json" \
-                                          -u "$TESTRAIL_USER:$TESTRAIL_API_KEY" \
-                                          "$TESTRAIL_URL/index.php?/api/v2/get_projects" \
-                                          && echo "✅ TestRail connection successful!" \
-                                          || echo "⚠️ TestRail connection issues - continuing build"
-                                    '''
-                                }
-                                
-                                sh '''
-                                    echo "Running backend tests..."
-                                    set +e
-                                    # Run tests but don't fail the stage
-                                    npx jest --watchAll=false --passWithNoTests --maxWorkers=2 --ci --reporters=default --reporters=jest-junit --outputFile=junit.xml --testFailureExitCode=0
-                                    TEST_EXIT_CODE=$?
-                                    echo "Jest exited with code: $TEST_EXIT_CODE"
-                                    
-                                    # GUARANTEED JUnit XML creation - SIMPLE APPROACH
-                                    echo "Ensuring JUnit report exists..."
-                                    cat > junit_guaranteed.xml << 'ENDOFFILE'
+       stage('Run Tests') {
+  parallel {
+    stage('Backend Tests') {
+      steps {
+        dir('backend') {
+          script {
+            withCredentials([usernamePassword(
+              credentialsId: 'jenkins_testrail',
+              usernameVariable: 'TESTRAIL_USER',
+              passwordVariable: 'TESTRAIL_API_KEY'
+            )]) {
+              sh '''
+                echo "Testing TestRail connection..."
+                curl -s -X GET \
+                  -H "Content-Type: application/json" \
+                  -u "$TESTRAIL_USER:$TESTRAIL_API_KEY" \
+                  "$TESTRAIL_URL/index.php?/api/v2/get_projects" \
+                  && echo "✅ TestRail connection successful!" \
+                  || echo "⚠️ TestRail connection issues - continuing build"
+              '''
+            }
+            
+            sh '''
+              echo "Running backend tests..."
+              set +e
+              # Use the test:ci script which now uses jest.config.js
+              npm run test:ci
+              TEST_EXIT_CODE=$?
+              echo "Tests exited with code: $TEST_EXIT_CODE"
+              
+              # Ensure JUnit report exists
+              echo "Ensuring JUnit report exists..."
+              if [ ! -f junit.xml ] || [ ! -s junit.xml ]; then
+                echo "Creating fallback JUnit report for backend"
+                cat > junit.xml << 'ENDOFFILE'
 <?xml version="1.0" encoding="UTF-8"?>
 <testsuites name="jest" tests="1" failures="0" time="1.0">
   <testsuite name="Backend Tests" tests="1" failures="0" errors="0" skipped="0" time="1.0">
-    <testcase name="Backend Test Suite" classname="Backend" time="1.0"/>
+    <testcase name="Backend Test Suite" classname="Backend" time="1.0">
+      <skipped message="Tests were skipped or no tests found"/>
+    </testcase>
   </testsuite>
 </testsuites>
 ENDOFFILE
-                                    
-                                    # Use the guaranteed report if Jest didn't create one
-                                    if [ ! -f junit.xml ] || [ ! -s junit.xml ]; then
-                                        echo "Using guaranteed JUnit report for backend"
-                                        cp junit_guaranteed.xml junit.xml
-                                    else
-                                        echo "Using Jest-generated JUnit report for backend"
-                                    fi
-                                    
-                                    echo "Backend test execution completed"
-                                '''
-                            }
-                        }
-                    }
-                    post {
-                        always {
-                            junit 'backend/junit.xml'
-                            archiveArtifacts artifacts: 'backend/junit.xml', allowEmptyArchive: true
-                        }
-                    }
-                }
-                stage('Frontend Tests') {
-                    steps {
-                        dir('frontend') {
-                            sh '''
-                                echo "Running frontend tests..."
-                                set +e
-                                # Run tests but don't fail the stage
-                                npx jest --watchAll=false --passWithNoTests --maxWorkers=2 --ci --reporters=default --reporters=jest-junit --outputFile=junit.xml --testFailureExitCode=0
-                                TEST_EXIT_CODE=$?
-                                echo "Jest exited with code: $TEST_EXIT_CODE"
-                                
-                                # GUARANTEED JUnit XML creation - SIMPLE APPROACH
-                                echo "Ensuring JUnit report exists..."
-                                cat > junit_guaranteed.xml << 'ENDOFFILE'
+              else
+                echo "Using generated JUnit report for backend"
+              fi
+              echo "Backend test execution completed"
+            '''
+          }
+        }
+      }
+      post {
+        always {
+          junit 'backend/junit.xml'
+          archiveArtifacts artifacts: 'backend/junit.xml', allowEmptyArchive: true
+        }
+      }
+    }
+    stage('Frontend Tests') {
+      steps {
+        dir('frontend') {
+          sh '''
+            echo "Running frontend tests..."
+            set +e
+            # Use the test:ci script which now uses jest.config.js
+            npm run test:ci
+            TEST_EXIT_CODE=$?
+            echo "Tests exited with code: $TEST_EXIT_CODE"
+            
+            # Ensure JUnit report exists
+            echo "Ensuring JUnit report exists..."
+            if [ ! -f junit.xml ] || [ ! -s junit.xml ]; then
+              echo "Creating fallback JUnit report for frontend"
+              cat > junit.xml << 'ENDOFFILE'
 <?xml version="1.0" encoding="UTF-8"?>
 <testsuites name="jest" tests="1" failures="0" time="1.0">
   <testsuite name="Frontend Tests" tests="1" failures="0" errors="0" skipped="0" time="1.0">
-    <testcase name="Frontend Test Suite" classname="Frontend" time="1.0"/>
+    <testcase name="Frontend Test Suite" classname="Frontend" time="1.0">
+      <skipped message="Tests were skipped or no tests found"/>
+    </testcase>
   </testsuite>
 </testsuites>
 ENDOFFILE
-                                
-                                # Use the guaranteed report if Jest didn't create one
-                                if [ ! -f junit.xml ] || [ ! -s junit.xml ]; then
-                                    echo "Using guaranteed JUnit report for frontend"
-                                    cp junit_guaranteed.xml junit.xml
-                                else
-                                    echo "Using Jest-generated JUnit report for frontend"
-                                fi
-                                
-                                echo "Frontend test execution completed"
-                            '''
-                        }
-                    }
-                    post {
-                        always {
-                            junit 'frontend/junit.xml'
-                            archiveArtifacts artifacts: 'frontend/junit.xml', allowEmptyArchive: true
-                        }
-                    }
-                }
-            }
+            else
+              echo "Using generated JUnit report for frontend"
+            fi
+            echo "Frontend test execution completed"
+          '''
         }
+      }
+      post {
+        always {
+          junit 'frontend/junit.xml'
+          archiveArtifacts artifacts: 'frontend/junit.xml', allowEmptyArchive: true
+        }
+      }
+    }
+  }
+}
         
         stage('Security Scan') {
             steps {

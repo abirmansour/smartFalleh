@@ -1,11 +1,7 @@
-import React from "react";
 import { FiSearch, FiBell } from "react-icons/fi";
-import { useNavigate } from "react-router-dom";
 import "./AdminNavbar.css";
 
 export default function AdminNavbar() {
-  const navigate = useNavigate();
-
 
   return (
     <div className="admin-navbar-container">

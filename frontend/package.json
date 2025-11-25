@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "test": "jest",
-    "test:ci": "jest --watchAll=false --passWithNoTests --maxWorkers=2 --ci --reporters=default --reporters=jest-junit",
     "build": "vite build",
-    "lint": "eslint .",
+    "test": "jest",
+    "test:ci": "jest --config jest.config.js",
+    "lint": "eslint . --ext .js,.jsx --fix",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -40,28 +40,5 @@
     "jest-environment-jsdom": "^30.2.0",
     "jest-json-reporter": "^1.2.2",
     "vite": "^7.1.7"
-  },
- "jest": {
-    "testEnvironment": "jsdom",
-    "transform": {
-      "^.+\\.[jt]sx?$": "babel-jest"
-    },
-    "setupFilesAfterEnv": ["<rootDir>/src/setupTests.js"],
-    "moduleNameMapper": {
-      "\\.(css|less|scss|sass)$": "identity-obj-proxy"
-    },
-    "reporters": [
-      "default",
-      [
-        "jest-junit",
-        {
-          "outputDirectory": ".",
-          "outputName": "junit.xml",
-          "suiteName": "Frontend Tests",
-          "classNameTemplate": "{classname}",
-          "titleTemplate": "{title}"
-        }
-      ]
-    ]
   }
 }

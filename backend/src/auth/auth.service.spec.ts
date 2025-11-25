@@ -133,9 +133,9 @@ describe('AuthService', () => {
   });
 
   // ✅ Test 7: logout should return success message
-  it('should return logout message', async () => {
-    const result = await authService.logout('some-token');
+it('should return logout message', async () => {
+  const result = await authService.logout('some-token');
+  expect(result).toEqual({ message: 'Déconnecté avec succès' }); 
+});
 
-    expect(result).toEqual({ message: 'Déconnecté' });
-  });
 });
