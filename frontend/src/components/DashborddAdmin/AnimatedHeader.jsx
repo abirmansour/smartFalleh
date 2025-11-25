@@ -80,8 +80,6 @@ export default function AnimatedHeader() {
 
     // optional: pause on hover
     const container = containerRef.current;
-    const pauseOnHover = (e) => tl.pause();
-    const resumeOnLeave = (e) => tl.resume();
     container.addEventListener("mouseenter", pauseOnHover);
     container.addEventListener("mouseleave", resumeOnLeave);
 

@@ -36,18 +36,17 @@
     "jest-json-reporter": "^1.2.2",
     "vite": "^7.1.7"
   },
-  "jest": {
+"jest": {
     "testEnvironment": "jsdom",
     "reporters": [
       "default",
       ["jest-junit", {
         "outputDirectory": ".",
-        "outputName": "junit.xml"
+        "outputName": "junit.xml",
+        "suiteName": "Frontend Tests",
+        "classNameTemplate": "{classname}",
+        "titleTemplate": "{title}"
       }]
-    ],
-    "collectCoverageFrom": [
-      "src/**/*.{js,jsx}",
-      "!src/**/*.d.ts"
     ]
   }
 }

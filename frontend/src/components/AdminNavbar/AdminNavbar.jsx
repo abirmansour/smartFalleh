@@ -6,10 +6,6 @@ import "./AdminNavbar.css";
 export default function AdminNavbar() {
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate("/login");
-  };
 
   return (
     <div className="admin-navbar-container">

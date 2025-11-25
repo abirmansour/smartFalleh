@@ -35,7 +35,7 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, []);
 
-  const login = async (credentials) => {
+  const login = async () => {
     try {
  
       // For demo purposes
