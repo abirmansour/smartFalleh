@@ -1,4 +1,11 @@
-import { IsEmail, IsString, MinLength, IsOptional, IsEnum, IsUUID } from 'class-validator';
+import {
+  IsEmail,
+  IsString,
+  MinLength,
+  IsOptional,
+  IsEnum,
+  IsUUID,
+} from 'class-validator';
 
 export class CreateUserDto {
   @IsString()
@@ -22,8 +29,6 @@ export class CreateUserDto {
   @IsString()
   adresse?: string;
 
- 
- 
   @IsEnum(['admin', 'agriculteur', 'jury', 'responsable'])
   @IsOptional()
   role?: string;

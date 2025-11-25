@@ -1,4 +1,4 @@
-import { Cooperative } from 'src/cooperative/entities/cooperative.entity';
+import { Cooperative } from '../../cooperative/entities/cooperative.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -25,8 +25,7 @@ export class User {
 
   @Column()
   password: string;
-  
-  
+
   @Column({ nullable: true })
   telephone: string;
 
@@ -35,12 +34,14 @@ export class User {
 
   @Column({
     type: 'enum',
-    enum: ['admin', 'agriculteur', 'jury','responsable'],
+    enum: ['admin', 'agriculteur', 'jury', 'responsable'],
     default: 'responsable',
   })
   role: string;
-@ManyToOne(() => Cooperative, (cooperative) => cooperative.responsables, { nullable: true })
-cooperative?: Cooperative;
+  @ManyToOne(() => Cooperative, (cooperative) => cooperative.responsables, {
+    nullable: true,
+  })
+  cooperative?: Cooperative;
   @Column({
     type: 'enum',
     enum: ['active', 'inactive'],
@@ -58,10 +59,8 @@ cooperative?: Cooperative;
   deletedAt?: Date;
 
   @Column({ type: 'varchar', nullable: true })
-resetPasswordToken: string | null;  
+  resetPasswordToken: string | null;
 
-@Column({ type: 'timestamp', nullable: true })
-resetPasswordExpires: Date | null; 
-
-
+  @Column({ type: 'timestamp', nullable: true })
+  resetPasswordExpires: Date | null;
 }

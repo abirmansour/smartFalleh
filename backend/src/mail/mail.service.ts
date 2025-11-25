@@ -22,8 +22,18 @@ export class MailService {
   }
 
   // 📩 1. Vérification initiale (email d’inscription)
-  async sendVerificationEmail(email: string, linkReset: string, linkSite: string) {
-    const templatePath = join(process.cwd(), 'src', 'mail', 'templates', 'email-template.html');
+  async sendVerificationEmail(
+    email: string,
+    linkReset: string,
+    linkSite: string,
+  ) {
+    const templatePath = join(
+      process.cwd(),
+      'src',
+      'mail',
+      'templates',
+      'email-template.html',
+    );
     let html = readFileSync(templatePath, 'utf8');
 
     html = html.replace('{{linkReset}}', linkReset);
@@ -44,14 +54,23 @@ export class MailService {
 
   // 🔐 2. Email Reset Password
   async sendResetPasswordEmail(email: string, linkReset: string) {
-    const templatePath = join(process.cwd(), 'src', 'mail', 'templates', 'email-template.html');
+    const templatePath = join(
+      process.cwd(),
+      'src',
+      'mail',
+      'templates',
+      'email-template.html',
+    );
     let html = readFileSync(templatePath, 'utf8');
 
     html = html
-      .replace('Bienvenue sur SmartFalleh 🌾', 'Réinitialisation du mot de passe 🔒')
+      .replace(
+        'Bienvenue sur SmartFalleh 🌾',
+        'Réinitialisation du mot de passe 🔒',
+      )
       .replace(
         'Votre compte a été créé avec succès sur la plateforme SmartFalleh. Veuillez choisir une action ci-dessous :',
-        "Vous avez demandé à réinitialiser votre mot de passe. Cliquez sur le bouton ci-dessous pour en définir un nouveau :"
+        'Vous avez demandé à réinitialiser votre mot de passe. Cliquez sur le bouton ci-dessous pour en définir un nouveau :',
       )
       .replace('{{linkReset}}', linkReset)
       .replace('{{linkSite}}', process.env.FRONT_URL || '#');
@@ -70,14 +89,14 @@ export class MailService {
   }
 
   // ✅ 3. Email d’acceptation du jury
- async sendJuryCreatedEmail(
-  email: string,
-  nom: string,
-  prenom: string,
-  tempPassword: string,
-  resetLink: string
-) {
-  const html = `
+  async sendJuryCreatedEmail(
+    email: string,
+    nom: string,
+    prenom: string,
+    tempPassword: string,
+    resetLink: string,
+  ) {
+    const html = `
     <div style="font-family:'Poppins',Arial,sans-serif;background:#f9fafb;padding:30px;">
       <div style="max-width:600px;margin:auto;background:white;border-radius:12px;padding:30px;border-top:6px solid #4caf50;">
         <h2 style="color:#2e7d32;">👋 Bonjour ${prenom} ${nom},</h2>
@@ -108,30 +127,28 @@ export class MailService {
     </div>
   `;
 
-  try {
-    await this.transporter.sendMail({
-      from: process.env.SMTP_FROM,
-      to: email,
-      subject: "🎉 Votre compte Jury a été créé - SmartFalleh",
-      html,
-    });
-    this.logger.log(`✅ Email de création envoyé à ${email}`);
-  } catch (error) {
-    this.logger.error(`❌ Erreur envoi mail jury: ${error.message}`);
+    try {
+      await this.transporter.sendMail({
+        from: process.env.SMTP_FROM,
+        to: email,
+        subject: '🎉 Votre compte Jury a été créé - SmartFalleh',
+        html,
+      });
+      this.logger.log(`✅ Email de création envoyé à ${email}`);
+    } catch (error) {
+      this.logger.error(`❌ Erreur envoi mail jury: ${error.message}`);
+    }
   }
-}
-
-
 
   async sendResponsableAssignationEmail(
-  email: string,
-  nom: string,
-  prenom: string,
-  coopName: string,
-  tempPassword: string,
-  resetLink: string
-) {
-  const html = `
+    email: string,
+    nom: string,
+    prenom: string,
+    coopName: string,
+    tempPassword: string,
+    resetLink: string,
+  ) {
+    const html = `
     <div style="font-family:Poppins,Arial,sans-serif;background:#f5f9f5;padding:20px;">
       <div style="background:white;border-radius:10px;padding:30px;max-width:600px;margin:auto;border-top:6px solid #4caf50;">
         <h2 style="color:#388e3c;">🌿 Affectation en tant que Responsable</h2>
@@ -159,17 +176,16 @@ export class MailService {
     </div>
   `;
 
-  try {
-    await this.transporter.sendMail({
-      from: process.env.SMTP_FROM,
-      to: email,
-      subject: `🌿 Affectation en tant que Responsable - ${coopName}`,
-      html,
-    });
-    this.logger.log(`✅ Email d'affectation envoyé à ${email}`);
-  } catch (error) {
-    this.logger.error(`❌ Erreur envoi email responsable: ${error.message}`);
+    try {
+      await this.transporter.sendMail({
+        from: process.env.SMTP_FROM,
+        to: email,
+        subject: `🌿 Affectation en tant que Responsable - ${coopName}`,
+        html,
+      });
+      this.logger.log(`✅ Email d'affectation envoyé à ${email}`);
+    } catch (error) {
+      this.logger.error(`❌ Erreur envoi email responsable: ${error.message}`);
+    }
   }
-}
-
 }

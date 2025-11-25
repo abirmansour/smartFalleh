@@ -17,8 +17,8 @@ export class AdminSeed implements OnModuleInit {
         nom: 'Super',
         prenom: 'Admin',
         email: 'admin@gmail.com',
-        password: 'admin123', 
-        telephone:'22222222',// sera hashé automatiquement
+        password: 'admin123',
+        telephone: '22222222', // sera hashé automatiquement
         role: 'admin',
       });
 

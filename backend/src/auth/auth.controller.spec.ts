@@ -2,7 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
-import { UnauthorizedException } from '@nestjs/common';
 
 // Mock bcrypt properly
 jest.mock('bcrypt', () => ({
@@ -47,7 +46,7 @@ describe('AuthService', () => {
     };
 
     mockUsersService.findByEmail.mockResolvedValue(mockUser);
-    
+
     const result = await authService.validateUser('test@email.com', 'password');
     expect(result).toEqual({
       id: mockUser.id,

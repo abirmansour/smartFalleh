@@ -21,7 +21,7 @@ import { DemandeModule } from './demande/demande.module';
       password: process.env.DB_PASSWORD,
       database: process.env.DB_DATABASE,
       autoLoadEntities: true,
-      synchronize: true, // 
+      synchronize: true, //
       entities: [User, Cooperative],
     }),
 
@@ -29,7 +29,7 @@ import { DemandeModule } from './demande/demande.module';
     AuthModule,
     SeedModule,
     CooperativeModule,
-    DemandeModule
+    DemandeModule,
   ],
 })
 export class AppModule {}

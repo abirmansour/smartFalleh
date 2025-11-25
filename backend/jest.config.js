@@ -1,15 +1,15 @@
-module.exports = {
+export default {
   moduleFileExtensions: ['js', 'json', 'ts'],
-  rootDir: 'src',
-  testRegex: '.*\\.spec\\.ts$',
+  rootDir: '.',
+  testRegex: 'src/.*\\.spec\\.ts$',
   transform: {
     '^.+\\.(t|j)s$': 'ts-jest',
   },
-  collectCoverageFrom: ['**/*.(t|j)s'],
-  coverageDirectory: '../coverage',
+  collectCoverageFrom: ['src/**/*.(t|j)s'],
+  coverageDirectory: './coverage',
   testEnvironment: 'node',
-  moduleNameMapping: {
-    '^src/(.*)$': '<rootDir>/$1',
+  moduleNameMapping: { 
+    '^src/(.*)$': '<rootDir>/src/$1',
   },
   reporters: [
     'default',
@@ -18,6 +18,9 @@ module.exports = {
       {
         outputDirectory: '.',
         outputName: 'junit.xml',
+        suiteName: 'Backend Tests',
+        classNameTemplate: '{classname}',
+        titleTemplate: '{title}',
       },
     ],
   ],

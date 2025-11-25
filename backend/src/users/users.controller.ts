@@ -53,15 +53,15 @@ export class UsersController {
   }
 
   @Post('request-password-reset')
-async requestReset(@Body('email') email: string) {
-  return this.usersService.requestPasswordReset(email);
-}
+  async requestReset(@Body('email') email: string) {
+    return this.usersService.requestPasswordReset(email);
+  }
 
-@Post('reset-password')
-async resetPassword(@Body() body: { token: string; newPassword: string }) {
-  return this.usersService.resetPassword(body.token, body.newPassword);
-}
- @UseGuards(JwtAuthGuard)
+  @Post('reset-password')
+  async resetPassword(@Body() body: { token: string; newPassword: string }) {
+    return this.usersService.resetPassword(body.token, body.newPassword);
+  }
+  @UseGuards(JwtAuthGuard)
   @Patch(':uid/profile')
   async updateProfile(@Param('uid') uid: string, @Body() dto: UpdateUserDto) {
     return this.usersService.updateProfile(uid, dto);

@@ -19,8 +19,7 @@ export class CooperativeService {
     coop.nom = `Cooperative Agricole ${createDto.gouvernorat}`; // auto-généré
     coop.telephone = createDto.telephone;
     coop.adresse = createDto.adresse;
-   coop.responsable = createDto.responsable || '';
-
+    coop.responsable = createDto.responsable || '';
 
     return this.coopRepo.save(coop);
   }
@@ -35,13 +34,17 @@ export class CooperativeService {
     return coop;
   }
 
-  async update(id: number, updateDto: UpdateCooperativeDto): Promise<Cooperative> {
+  async update(
+    id: number,
+    updateDto: UpdateCooperativeDto,
+  ): Promise<Cooperative> {
     const coop = await this.findOne(id);
 
     Object.assign(coop, updateDto);
 
     // si commune est modifiée, regen le nom
-    if (updateDto.commune) coop.nom = `Cooperative Agricole ${updateDto.commune}`;
+    if (updateDto.commune)
+      coop.nom = `Cooperative Agricole ${updateDto.commune}`;
 
     return this.coopRepo.save(coop);
   }

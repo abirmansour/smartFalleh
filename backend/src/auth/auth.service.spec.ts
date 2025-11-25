@@ -16,8 +16,6 @@ const mockJwtService = {
 
 describe('AuthService', () => {
   let authService: AuthService;
-  let usersService: UsersService;
-  let jwtService: JwtService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -29,8 +27,6 @@ describe('AuthService', () => {
     }).compile();
 
     authService = module.get<AuthService>(AuthService);
-    usersService = module.get<UsersService>(UsersService);
-    jwtService = module.get<JwtService>(JwtService);
 
     // Clear all mocks before each test
     jest.clearAllMocks();
@@ -45,10 +41,15 @@ describe('AuthService', () => {
   it('should return null when user does not exist', async () => {
     mockUsersService.findByEmail.mockResolvedValue(null);
 
-    const result = await authService.validateUser('nonexistent@email.com', 'password');
+    const result = await authService.validateUser(
+      'nonexistent@email.com',
+      'password',
+    );
 
     expect(result).toBeNull();
-    expect(mockUsersService.findByEmail).toHaveBeenCalledWith('nonexistent@email.com');
+    expect(mockUsersService.findByEmail).toHaveBeenCalledWith(
+      'nonexistent@email.com',
+    );
   });
 
   // ✅ Test 3: validateUser should return null for incorrect password
@@ -57,16 +58,22 @@ describe('AuthService', () => {
       uid: '123',
       email: 'test@email.com',
       password: 'hashedPassword',
-      etat: 'active'
+      etat: 'active',
     };
 
     mockUsersService.findByEmail.mockResolvedValue(mockUser);
     jest.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
 
-    const result = await authService.validateUser('test@email.com', 'wrongpassword');
+    const result = await authService.validateUser(
+      'test@email.com',
+      'wrongpassword',
+    );
 
     expect(result).toBeNull();
-    expect(bcrypt.compare).toHaveBeenCalledWith('wrongpassword', 'hashedPassword');
+    expect(bcrypt.compare).toHaveBeenCalledWith(
+      'wrongpassword',
+      'hashedPassword',
+    );
   });
 
   // ✅ Test 4: validateUser should return null for inactive account
@@ -75,13 +82,16 @@ describe('AuthService', () => {
       uid: '123',
       email: 'test@email.com',
       password: 'hashedPassword',
-      etat: 'inactive'
+      etat: 'inactive',
     };
 
     mockUsersService.findByEmail.mockResolvedValue(mockUser);
     jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
 
-    const result = await authService.validateUser('test@email.com', 'correctpassword');
+    const result = await authService.validateUser(
+      'test@email.com',
+      'correctpassword',
+    );
 
     expect(result).toBeNull();
   });
@@ -93,17 +103,23 @@ describe('AuthService', () => {
       email: 'test@email.com',
       password: 'hashedPassword',
       etat: 'active',
-      role: 'user'
+      role: 'user',
     };
 
     mockUsersService.findByEmail.mockResolvedValue(mockUser);
     jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
 
-    const result = await authService.validateUser('test@email.com', 'correctpassword');
+    const result = await authService.validateUser(
+      'test@email.com',
+      'correctpassword',
+    );
 
     expect(result).toEqual(mockUser);
     expect(mockUsersService.findByEmail).toHaveBeenCalledWith('test@email.com');
-    expect(bcrypt.compare).toHaveBeenCalledWith('correctpassword', 'hashedPassword');
+    expect(bcrypt.compare).toHaveBeenCalledWith(
+      'correctpassword',
+      'hashedPassword',
+    );
   });
 
   // ✅ Test 6: login should return token and user data
@@ -111,7 +127,7 @@ describe('AuthService', () => {
     const mockUser = {
       uid: '123',
       email: 'test@email.com',
-      role: 'user'
+      role: 'user',
     };
 
     const mockToken = 'mock-jwt-token';
@@ -123,19 +139,18 @@ describe('AuthService', () => {
       token: mockToken,
       id: '123',
       email: 'test@email.com',
-      role: 'user'
+      role: 'user',
     });
     expect(mockJwtService.sign).toHaveBeenCalledWith({
       email: 'test@email.com',
       sub: '123',
-      role: 'user'
+      role: 'user',
     });
   });
 
   // ✅ Test 7: logout should return success message
-it('should return logout message', async () => {
-  const result = await authService.logout('some-token');
-  expect(result).toEqual({ message: 'Déconnecté avec succès' }); 
-});
-
+  it('should return logout message', async () => {
+    const result = await authService.logout('some-token');
+    expect(result).toEqual({ message: 'Déconnecté avec succès' });
+  });
 });

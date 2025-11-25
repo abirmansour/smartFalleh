@@ -1,4 +1,11 @@
-import { Controller, Post, Body, UseGuards, Req, UnauthorizedException } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  Req,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { CreateUserDto } from '../users/dto/create-user.dto';
@@ -18,18 +25,17 @@ export class AuthController {
   }
 
   // Login
-  
- @Post('login')
-async login(@Body() body: { email: string; password: string }) {
-  const user = await this.authService.validateUser(body.email, body.password);
-  
-  if (!user) {
-    throw new UnauthorizedException('Email ou mot de passe incorrect');
+
+  @Post('login')
+  async login(@Body() body: { email: string; password: string }) {
+    const user = await this.authService.validateUser(body.email, body.password);
+
+    if (!user) {
+      throw new UnauthorizedException('Email ou mot de passe incorrect');
+    }
+
+    return this.authService.login(user);
   }
-
-  return this.authService.login(user);
-}
-
 
   // Logout
   @Post('logout')
@@ -39,7 +45,3 @@ async login(@Body() body: { email: string; password: string }) {
     return this.authService.logout(token);
   }
 }
-
-
-
-

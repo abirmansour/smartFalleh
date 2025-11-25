@@ -1,4 +1,9 @@
-import { Injectable, ExecutionContext, UnauthorizedException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  ExecutionContext,
+  UnauthorizedException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
@@ -10,8 +15,8 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       request.path === '/auth/login' ||
       request.path === '/auth/register' ||
       request.path === '/auth/refresh-token' ||
-      request.path === '/users/request-password-reset' || 
-      request.path === '/users/reset-password' ||          // ✅ وهذا
+      request.path === '/users/request-password-reset' ||
+      request.path === '/users/reset-password' || // ✅ وهذا
       (request.path === '/demandes' && request.method === 'POST'); // 👈 هنا زدنا الاستثناء
 
     if (isPublicRoute) {

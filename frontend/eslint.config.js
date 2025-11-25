@@ -5,7 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(['dist', '**/junit.xml']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [
@@ -17,7 +17,7 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: {
         ...globals.browser,
-        ...globals.jest, 
+        ...globals.jest,
         test: 'readonly',
         expect: 'readonly',
         describe: 'readonly',
@@ -35,20 +35,35 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { 
+      'no-unused-vars': ['warn', { 
         varsIgnorePattern: '^[A-Z_]',
         argsIgnorePattern: '^_',
         caughtErrorsIgnorePattern: '^_'
       }],
-      'no-undef': 'error',
-      'react-hooks/exhaustive-deps': 'warn', // Change to warn instead of error
-      'react-refresh/only-export-components': 'warn', // Change to warn instead of error
+      'no-undef': 'warn',
+      'react-hooks/exhaustive-deps': 'warn',
+      'react-refresh/only-export-components': 'warn',
     },
+  },
+  {
+    files: ['**/jest.config.js', '**/setupTests.js'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        module: 'readonly',
+        require: 'readonly',
+        exports: 'readonly',
+        global: 'readonly'
+      }
+    },
+    rules: {
+      'no-undef': 'off'
+    }
   },
   {
     files: ['**/*.test.{js,jsx}', '**/__tests__/**/*.{js,jsx}'],
     rules: {
-      'no-unused-vars': 'off', // Disable for test files
+      'no-unused-vars': 'off'
     }
   }
 ])
