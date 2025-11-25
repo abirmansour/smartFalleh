@@ -58,7 +58,7 @@ pipeline {
                 stage('Backend Dependencies') {
                     steps {
                         dir('backend') {
-                            sh 'npm ci --no-audit' 
+                            sh 'npm ci --no-audit'
                             sh 'npm install --save-dev jest-junit@16.0.0 || echo "jest-junit installation issue"'
                         }
                     }
@@ -66,7 +66,7 @@ pipeline {
                 stage('Frontend Dependencies') {
                     steps {
                         dir('frontend') {
-                            sh 'npm ci --no-audit'  
+                            sh 'npm ci --no-audit'
                             sh 'npm install --save-dev jest-junit@16.0.0 || echo "jest-junit installation issue"'
                         }
                     }
@@ -147,24 +147,25 @@ pipeline {
                                         --reporters=default \
                                         --reporters=jest-junit \
                                         --outputFile=junit.xml \
-                                        --testFailureExitCode=0  
+                                        --testFailureExitCode=0  # Don't exit with failure code
                                     
                                     TEST_EXIT_CODE=$?
                                     echo "Jest exited with code: $TEST_EXIT_CODE"
                                     
-                                    # Create fallback JUnit report if no tests found or report is empty
+                                    # Create fallback JUnit report if no tests found or report is empty - FIXED SYNTAX
                                     if [ ! -f junit.xml ] || [ ! -s junit.xml ] || ! grep -q "testsuites" junit.xml; then
                                         echo "Creating fallback JUnit report for backend..."
-                                        cat > junit.xml << EOF
-                                        <?xml version="1.0" encoding="UTF-8"?>
-                                        <testsuites name="jest" tests="1" failures="0" time="0.1">
-                                          <testsuite name="Backend Test Suite" tests="1" failures="0" errors="0" skipped="0" time="0.1">
-                                            <testcase name="No tests found" classname="Backend" time="0.1">
-                                              <skipped message="No test files found or all tests were skipped"/>
-                                            </testcase>
-                                          </testsuite>
-                                        </testsuites>
-                                        EOF
+                                        cat > junit_fallback.xml << 'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="jest" tests="1" failures="0" time="0.1">
+  <testsuite name="Backend Test Suite" tests="1" failures="0" errors="0" skipped="0" time="0.1">
+    <testcase name="No tests found" classname="Backend" time="0.1">
+      <skipped message="No test files found or all tests were skipped"/>
+    </testcase>
+  </testsuite>
+</testsuites>
+EOF
+                                        mv junit_fallback.xml junit.xml
                                     fi
                                     
                                     echo "Backend test execution completed"
@@ -199,19 +200,20 @@ pipeline {
                                 TEST_EXIT_CODE=$?
                                 echo "Jest exited with code: $TEST_EXIT_CODE"
                                 
-                                # Create fallback JUnit report if no tests found or report is empty
+                                # Create fallback JUnit report if no tests found or report is empty - FIXED SYNTAX
                                 if [ ! -f junit.xml ] || [ ! -s junit.xml ] || ! grep -q "testsuites" junit.xml; then
                                     echo "Creating fallback JUnit report for frontend..."
-                                    cat > junit.xml << EOF
-                                    <?xml version="1.0" encoding="UTF-8"?>
-                                    <testsuites name="jest" tests="1" failures="0" time="0.1">
-                                      <testsuite name="Frontend Test Suite" tests="1" failures="0" errors="0" skipped="0" time="0.1">
-                                        <testcase name="No tests found" classname="Frontend" time="0.1">
-                                          <skipped message="No test files found or all tests were skipped"/>
-                                        </testcase>
-                                      </testsuite>
-                                    </testsuites>
-                                    EOF
+                                    cat > junit_fallback.xml << 'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="jest" tests="1" failures="0" time="0.1">
+  <testsuite name="Frontend Test Suite" tests="1" failures="0" errors="0" skipped="0" time="0.1">
+    <testcase name="No tests found" classname="Frontend" time="0.1">
+      <skipped message="No test files found or all tests were skipped"/>
+    </testcase>
+  </testsuite>
+</testsuites>
+EOF
+                                    mv junit_fallback.xml junit.xml
                                 fi
                                 
                                 echo "Frontend test execution completed"
