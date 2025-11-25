@@ -163,39 +163,7 @@ pipeline {
         }
 
 
-        stage('Build Applications') {
-            parallel {
-                stage('Build Backend') {
-                    steps {
-                        dir('backend') {
-                            sh 'npm run build || echo "Backend build failed or not configured"'
-                        }
-                    }
-                }
-                stage('Build Frontend') {
-                    steps {
-                        dir('frontend') {
-                            sh 'npm run build || echo "Frontend build failed or not configured"'
-                        }
-                    }
-                }
-            }
-        }
-        
-        // docjer stages
-        stage('Build Docker Images') {
-            steps {
-                script {
-                    // Build and tag backend image
-                    docker.build("${env.DOCKER_REGISTRY}/${env.DOCKER_IMAGE_BACKEND}:${env.DOCKER_TAG}", "--build-arg NODE_ENV=production -f backend/Dockerfile ./backend")
-                    
-                    // Build and tag frontend image
-                    docker.build("${env.DOCKER_REGISTRY}/${env.DOCKER_IMAGE_FRONTEND}:${env.DOCKER_TAG}", "-f frontend/Dockerfile ./frontend") 
-        
-                }
-            }
-        }
-
+        // docker stages 
         stage('Build Docker Images') {
             steps {
                 script {
