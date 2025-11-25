@@ -100,6 +100,7 @@ export default function AnimatedHeader() {
   };
 
   return (
+    <div className="dash-container">
     <div className="animated-header" ref={containerRef}>
       <div className="slide-stage">
         {slides.map((s, i) => (
@@ -123,6 +124,21 @@ export default function AnimatedHeader() {
         {slides.map((_, i) => (
           <span key={i} className="dot" />
         ))}
+      </div>
+       </div>
+       <div className="dashboard-cards">
+        <div className="dashboard-card">
+          <h3>Agriculteurs</h3>
+          <p>Nombre total: 24</p>
+        </div>
+        <div className="dashboard-card">
+          <h3>Demandes</h3>
+          <p>En attente: 5</p>
+        </div>
+        <div className="dashboard-card">
+          <h3>Rapports</h3>
+          <p>Derniers rapports: 3</p>
+        </div>
       </div>
     </div>
   );

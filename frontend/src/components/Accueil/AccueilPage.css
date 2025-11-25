@@ -1,42 +1,46 @@
-body {
-    background-color: rgb(255, 255, 255);
+body{
+  background: white;
 }
+
 /* Section principale */
 .accueil-section {
-  width: 109%;
-  height: 110vh;
+  width: 100%;
+  min-height: 100vh;
   position: relative;
-   margin: 0;
+  margin: 0;
   padding: 0;
-  
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 /* Image de fond */
 .accueil-image-container {
-  margin-top: -4%;  
-  width: 122%;
-  height: 88%;
-  margin-left: -11%;
-  overflow: hidden;
- 
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
 }
 
 .accueil-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center;
 }
 
 /* Texte central */
 .accueil-text {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  position: relative;
   text-align: center;
   width: 100%;
-  padding: 0 1rem;
-  z-index: 10;
+  max-width: 1200px;
+  padding: 2rem;
+  z-index: 2;
+  color: white;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .accueil-title {

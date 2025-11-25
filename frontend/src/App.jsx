@@ -8,9 +8,9 @@ import About from './components/About/About';
 import Contact from './components/Contact/Contact';
 import Login from './components/Connextion/Login';
 
-// Dashboards
-import AdminLayout from './components/AdminLayout/AdminLayout';
-import DashboardAdmin from './components/DashborddAdmin/DashborddAdmin';
+// Components
+import Dashboard from './components/dashbaord/Dashboard';
+import AnimatedHeader from './components/DashborddAdmin/AnimatedHeader';
 import ListAgriculteur from './components/ListAgriculteur/ListAgriculteur';
 import ListJury from './components/ListJury/JuryList';
 import ListDemande from './components/demande/ListDemande';
@@ -64,21 +64,25 @@ export default function App() {
         <Route path="/login2" element={<LoginPage2 />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
-        {/* Admin */}
-        <Route path="/admin/*" element={
-          <ProtectedRoute requiredRoles={['admin']}>
-            <AdminLayout />
+
+
+        {/* Dashboard - Accessible to all authenticated users */}
+        <Route path="/dashboard" element={
+          <ProtectedRoute requiredRoles={['admin', 'agriculteur', 'responsable', 'jury']}>
+            <Dashboard />
           </ProtectedRoute>
         }>
-          <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<DashboardAdmin />} />
+          <Route index element={<AnimatedHeader />} />
+          {/* Admin specific routes */}
           <Route path="administration/agriculteur" element={<ListAgriculteur />} />
-          <Route path="administration/jury" element={<ListJury />} /> 
+          <Route path="administration/jury" element={<ListJury />} />
           <Route path="administration/cooperative" element={<CooperativeList />} />
           <Route path="administration/demande" element={<ListDemande />} />
-          <Route path="administration/responsable" element={<ResponsableListPage />} /> 
-          <Route path="profile" element={<Profile />} /> 
+          <Route path="administration/responsable" element={<ResponsableListPage />} />
+          <Route path="profile" element={<Profile />} />
         </Route>
+        {/* Redirect old admin routes to new dashboard */}
+        <Route path="/admin/*" element={<Navigate to="/dashboard" replace />} />
 
         {/* Unauthorized */}
         <Route path="/unauthorized" element={

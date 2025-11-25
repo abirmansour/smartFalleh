@@ -1,20 +1,27 @@
-/* Section principale */
+
 .contact-section {
-  width: 140%;
-  max-width: 1420px;
+  width: 80%;
   margin: 0 auto;
   padding: 4rem 1.25rem;
   color: #333;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  justify-content: center;
 }
 
 /* Header */
 .contact-header {
   text-align: center;
-  padding: 4rem 1.25rem;
+  padding: 3rem 2rem;
   background: linear-gradient(to bottom right, #C2B280, #e4e8eb);
   border-radius: 1rem;
   margin-bottom: 2.5rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .contact-header h1 {
@@ -90,6 +97,9 @@
 
 /* Équipe */
 .contact-team {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
   background-color: #007F3F;
   padding: 1.25rem;
   border-radius: 1.5rem;
@@ -137,7 +147,7 @@
   height: 120px;
   border-radius: 50%;
   overflow: hidden;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1rem;
 }
 
 .team-photo img {
@@ -150,7 +160,6 @@
 .team-member h4 {
   font-size: 1.25rem;
   color: #2c3e50;
-  margin-bottom: 0.625rem;
 }
 
 .team-member p {
@@ -158,6 +167,14 @@
 }
 
 /* Carte map */
+.contact-map {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 2rem 0;
+}
+
 .contact-map h2 {
   font-size: 2rem;
   text-align: center;
@@ -168,8 +185,10 @@
 .map-container {
   height: 400px;
   width: 100%;
+  margin: 0 auto;
   border-radius: 1rem;
   overflow: hidden;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .map-frame {

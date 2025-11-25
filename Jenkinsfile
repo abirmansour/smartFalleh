@@ -2,7 +2,8 @@ pipeline {
     agent any
     
     tools {
-        nodejs 'node22' // This should work now!
+        nodejs 'node22' 
+        docker 'docker'
     }
     
     options {
@@ -15,6 +16,17 @@ pipeline {
         DATABASE_URL = 'mysql://root:root@localhost:3306/smartfallah'
         JWT_SECRET = credentials('jwt_key')
         REACT_APP_API_URL = 'http://localhost:3001'
+
+        // docker 
+        DOCKER_REGISTRY = 'doffy01'
+        DOCKER_IMAGE_BACKEND = 'smartfalleh-backend'
+        DOCKER_IMAGE_FRONTEND = 'smartfalleh-frontend'
+        DOCKER_TAG = "${env.BUILD_NUMBER}"
+
+        // testrail env var
+        TESTRAIL_URL = 'https://smartfalleh.testrail.io'
+        TESTRAIL_PROJECT_ID = '1'
+        TESTRAIL_SUITE_ID = '1'
     }
     
     stages {
@@ -74,13 +86,34 @@ pipeline {
                 }
             }
         }
-        
+
+        // TestRail integration
         stage('Run Tests') {
             parallel {
                 stage('Backend Tests') {
                     steps {
                         dir('backend') {
-                            sh 'npm test -- --watchAll=false --passWithNoTests || echo "Backend tests failed or no tests"'
+                            script {
+                                withCredentials([usernamePassword(
+                                    credentialsId: 'jenkins_testrail',
+                                    usernameVariable: 'TESTRAIL_USER',
+                                    passwordVariable: 'TESTRAIL_API_KEY'
+                                )]) {
+                                    // Simple TestRail test first
+                                    sh '''
+                                        echo "Testing TestRail connection..."
+                                        curl -s -X GET \
+                                          -H "Content-Type: application/json" \
+                                          -u "$TESTRAIL_USER:$TESTRAIL_API_KEY" \
+                                          "$TESTRAIL_URL/index.php?/api/v2/get_projects" \
+                                          && echo "✅ TestRail connection successful!" \
+                                          || echo "❌ TestRail connection failed - but continuing build"
+                                    '''
+                                    
+                                    // Run tests
+                                    sh 'npm test -- --watchAll=false --passWithNoTests || echo "Backend tests failed or no tests"'
+                                }
+                            }
                         }
                     }
                 }
@@ -106,7 +139,7 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Build Applications') {
             parallel {
                 stage('Build Backend') {
@@ -125,8 +158,50 @@ pipeline {
                 }
             }
         }
-    }
-    
+        
+        // docjer stages
+        stage('Build Docker Images') {
+            steps {
+                script {
+                    // Build and tag backend image
+                    docker.build("${env.DOCKER_REGISTRY}/${env.DOCKER_IMAGE_BACKEND}:${env.DOCKER_TAG}", "--build-arg NODE_ENV=production -f backend/Dockerfile ./backend")
+                    
+                    // Build and tag frontend image
+                    docker.build("${env.DOCKER_REGISTRY}/${env.DOCKER_IMAGE_FRONTEND}:${env.DOCKER_TAG}", "-f frontend/Dockerfile ./frontend") 
+        
+                }
+            }
+        }
+
+        stage('Push Docker Images') {
+            steps {
+                script {
+                    // Login to Docker Hub 
+                    withCredentials([usernamePassword(
+                        credentialsId: 'docker_jenkins',
+                        usernameVariable: 'DOCKER_HUB_USER',      
+                        passwordVariable: 'DOCKER_HUB_PASSWORD'   
+                    )]) {
+                        sh "echo ${DOCKER_HUB_PASSWORD} | docker login -u ${DOCKER_HUB_USER} --password-stdin"
+                        
+                        // Push backend image
+                        sh "docker push ${env.DOCKER_REGISTRY}/${env.DOCKER_IMAGE_BACKEND}:${env.DOCKER_TAG}"
+                        
+                        // Push frontend image
+                        sh "docker push ${env.DOCKER_REGISTRY}/${env.DOCKER_IMAGE_FRONTEND}:${env.DOCKER_TAG}"
+                        
+                        // Optionally, also tag as latest
+                        sh "docker tag ${env.DOCKER_REGISTRY}/${env.DOCKER_IMAGE_BACKEND}:${env.DOCKER_TAG} ${env.DOCKER_REGISTRY}/${env.DOCKER_IMAGE_BACKEND}:latest"
+                        sh "docker tag ${env.DOCKER_REGISTRY}/${env.DOCKER_IMAGE_FRONTEND}:${env.DOCKER_TAG} ${env.DOCKER_REGISTRY}/${env.DOCKER_IMAGE_FRONTEND}:latest"  // Fixed
+                        
+                        sh "docker push ${env.DOCKER_REGISTRY}/${env.DOCKER_IMAGE_BACKEND}:latest"
+                        sh "docker push ${env.DOCKER_REGISTRY}/${env.DOCKER_IMAGE_FRONTEND}:latest"
+                    }
+                }
+            }
+        }
+    } 
+
     post {
         always {
             cleanWs()

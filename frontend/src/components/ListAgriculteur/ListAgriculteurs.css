@@ -1,6 +1,5 @@
 .list-agriculteur-container {
-  padding: 1rem 3rem ; /* أكبر padding أفقي */
-  /* margin-top: -26px; */
+  padding: 1rem 3rem ; 
   min-height: 100vh;
   width: 99%;
   padding: 20px;
@@ -52,13 +51,11 @@
   background-color: #059669;
 }
 
-/* الآن نخلي الكروت تاخذ عرض الصفحة */
-
 .list-agriculteur-card:hover {
   transform: translateY(-5px);
 }
 .card-content {
-  padding: 55px 20px 20px; /* يبدأ بعد الصورة مباشرة */
+  padding: 55px 20px 20px;
   text-align: center;
 }
 .card-content h3 {
@@ -148,12 +145,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 60;
+  margin-top: 2.4rem;
 }
 
 
-
 .modal h3 {
-  margin-bottom: 1rem;
   color: #065f46;
   font-weight: 600;
 }
