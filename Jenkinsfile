@@ -25,7 +25,7 @@ pipeline {
 
         // testrail env var
         TESTRAIL_URL = 'https://smartfalleh.testrail.io'
-        TESTRAIL_PROJECT_ID = '1'
+        TESTRAIL_PROJECT_ID = '2' 
         TESTRAIL_SUITE_ID = '1'
     }
     
@@ -57,6 +57,7 @@ pipeline {
                     steps {
                         dir('backend') {
                             sh 'npm install'
+                            sh 'npm install --save-dev jest-junit || echo "jest-junit already installed"'
                         }
                     }
                 }
@@ -64,6 +65,7 @@ pipeline {
                     steps {
                         dir('frontend') {
                             sh 'npm install'
+                            sh 'npm install --save-dev jest-junit || echo "jest-junit already installed"'
                         }
                     }
                 }
@@ -89,8 +91,7 @@ pipeline {
             }
         }
 
-        // TestRail integration
-           stage('Run Tests') {
+        stage('Run Tests') {
             parallel {
                 stage('Backend Tests') {
                     steps {
@@ -101,7 +102,6 @@ pipeline {
                                     usernameVariable: 'TESTRAIL_USER',
                                     passwordVariable: 'TESTRAIL_API_KEY'
                                 )]) {
-                                    // TestRail connection test
                                     sh '''
                                         echo "Testing TestRail connection..."
                                         curl -s -X GET \
@@ -113,18 +113,17 @@ pipeline {
                                     '''
                                 }
                                 
-                                // Run backend tests with better error handling
                                 sh '''
                                     echo "Running backend tests..."
-                                    npm test -- --watchAll=false --passWithNoTests --maxWorkers=2 || echo "Backend tests completed with some failures"
+                                    npm test -- --watchAll=false --passWithNoTests --maxWorkers=2 --ci --reporters=default --reporters=jest-junit || echo "Backend tests completed with some failures"
                                 '''
                             }
                         }
                     }
                     post {
                         always {
-                            // Archive test results
-                            junit 'backend/test-results.xml' 
+                            junit 'backend/junit.xml'
+                        archiveArtifacts artifacts: 'backend/junit.xml', allowEmptyArchive: true
                         }
                     }
                 }
@@ -132,17 +131,15 @@ pipeline {
                     steps {
                         dir('frontend') {
                             sh '''
-                                echo "Checking Jest installation..."
-                                npx jest --version || npm install --save-dev jest
                                 echo "Running frontend tests..."
-                                npm test -- --watchAll=false --passWithNoTests --maxWorkers=2 || echo "Frontend tests completed with some failures"
+                                npm test -- --watchAll=false --passWithNoTests --maxWorkers=2 --ci --reporters=default --reporters=jest-junit || echo "Frontend tests completed with some failures"
                             '''
                         }
                     }
                     post {
                         always {
-                            // Archive test results
-                            junit 'frontend/test-results.xml'
+                            junit 'frontend/junit.xml'
+                            archiveArtifacts artifacts: 'frontend/junit.xml', allowEmptyArchive: true
                         }
                     }
                 }
@@ -161,7 +158,6 @@ pipeline {
                 }
             }
         }
-
 
         // docker stages 
         stage('Build Docker Images') {
@@ -214,15 +210,33 @@ pipeline {
                         usernameVariable: 'TESTRAIL_USER',
                         passwordVariable: 'TESTRAIL_API_KEY'
                     )]) {
-                        // Report build status to TestRail
                         sh '''
-                            echo "Reporting to TestRail..."
+                            echo "=== Reporting Final Results to TestRail ==="
+                            
+                            # Determine status based on build result
+                            if [ "${currentBuild.currentResult}" = "SUCCESS" ]; then
+                                STATUS_ID=1
+                                STATUS_TEXT="Passed"
+                            else
+                                STATUS_ID=5
+                                STATUS_TEXT="Failed"
+                            fi
+                            
+                            echo "Build Result: ${currentBuild.currentResult} -> TestRail Status: $STATUS_TEXT ($STATUS_ID)"
+                            
+                            # Simple TestRail reporting - add result to a specific case
                             curl -X POST \
                               -H "Content-Type: application/json" \
                               -u "$TESTRAIL_USER:$TESTRAIL_API_KEY" \
-                              -d '{"status_id": 1, "comment": "Build ${BUILD_NUMBER} completed with status: ${currentBuild.currentResult}"}' \
-                              "${TESTRAIL_URL}/index.php?/api/v2/add_result_for_case/${TESTRAIL_RUN_ID}/${TESTRAIL_CASE_ID}" \
-                              || echo "TestRail reporting optional"
+                              -d '{
+                                "status_id": '"$STATUS_ID"',
+                                "comment": "Jenkins Automated Build Report\\n\\nBuild Number: '"${BUILD_NUMBER}"'\\nBuild Result: '"${currentBuild.currentResult}"'\\nBuild URL: '"${BUILD_URL}"'\\n\\nTest Results:\\n- Backend: Tests executed\\n- Frontend: Tests executed\\n- Linting: Completed\\n- Security: Scanned\\n- Docker: Images built and pushed",
+                                "version": "Build-'"${BUILD_NUMBER}"'",
+                                "elapsed": "10m"
+                              }' \
+                              "$TESTRAIL_URL/index.php?/api/v2/add_result_for_case/1/1" \
+                              && echo "✅ TestRail reporting successful" \
+                              || echo "⚠️ TestRail reporting failed - but build continues"
                         '''
                     }
                 }
@@ -233,11 +247,10 @@ pipeline {
     post {
         always {
             // Archive test results
-            junit '**/test-results.xml'
+            junit '**/junit.xml'
             
             // Archive build artifacts
-            archiveArtifacts artifacts: '**/dist/**/*', allowEmptyArchive: true
-            archiveArtifacts artifacts: '**/build/**/*', allowEmptyArchive: true
+            archiveArtifacts artifacts: '**/dist/**/*, **/build/**/*, **/junit.xml', allowEmptyArchive: true
             
             cleanWs()
             echo "Build #${BUILD_NUMBER} completed with status: ${currentBuild.currentResult}"
