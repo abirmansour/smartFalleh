@@ -1,13 +1,11 @@
-import { Module, OnModuleInit } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { User } from './users/entities/user.entity';
-import { UsersService } from './users/users.service';
 import { SeedModule } from './seed/seed.module';
 import { CooperativeModule } from './cooperative/cooperative.module';
-
 import { Cooperative } from './cooperative/entities/cooperative.entity';
 import { DemandeModule } from './demande/demande.module';
 
@@ -23,7 +21,7 @@ import { DemandeModule } from './demande/demande.module';
       password: process.env.DB_PASSWORD,
       database: process.env.DB_DATABASE,
       autoLoadEntities: true,
-      synchronize: true, // ❗️ désactiver en production
+      synchronize: true, // 
       entities: [User, Cooperative],
     }),
 

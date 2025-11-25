@@ -16,7 +16,7 @@ import ListJury from './components/ListJury/JuryList';
 import ListDemande from './components/demande/ListDemande';
 // Composants auxiliaires
 import Navbar from './components/NavBar/Navbar';
-import Footer from './components/footer/Footer';
+import Footer from './components/Footer/Footer';
 import CooperativeList from './components/CooperativeAgricole/CooperativeList';
 import ResponsableListPage from './components/ResponsableList/ResponsableListPage';
 import LoginPage2 from './components/Connextion/LoginPage2';
