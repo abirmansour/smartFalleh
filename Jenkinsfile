@@ -242,42 +242,45 @@ ENDOFFILE
             }
         }
         
-        stage('Report to TestRail') {
-            steps {
-                script {
-                    withCredentials([usernamePassword(
-                        credentialsId: 'jenkins_testrail',
-                        usernameVariable: 'TESTRAIL_USER',
-                        passwordVariable: 'TESTRAIL_API_KEY'
-                    )]) {
-                        sh '''
-                            echo "=== Reporting Final Results to TestRail ==="
-                            
-                            # Simple status determination without complex substitution
-                            if [ "SUCCESS" = "SUCCESS" ]; then
-                                STATUS_ID=1
-                                COMMENT="Jenkins Build ${BUILD_NUMBER} - SUCCESS"
-                            else
-                                STATUS_ID=5
-                                COMMENT="Jenkins Build ${BUILD_NUMBER} - FAILED"
-                            fi
-                            
-                            echo "Reporting to TestRail: Status ID $STATUS_ID"
-                            
-                            # TestRail reporting with simple payload
-                            curl -s -X POST \
-                              -H "Content-Type: application/json" \
-                              -u "$TESTRAIL_USER:$TESTRAIL_API_KEY" \
-                              -d "{\\"status_id\\": $STATUS_ID, \\"comment\\": \\"$COMMENT\\"}" \
-                              "$TESTRAIL_URL/index.php?/api/v2/add_result_for_case/$TESTRAIL_PROJECT_ID/$TESTRAIL_SUITE_ID" \
-                              && echo "✅ TestRail reporting successful" \
-                              || echo "⚠️ TestRail reporting failed - but build continues"
-                        '''
-                    }
-                }
+stage('Report to TestRail') {
+    steps {
+        script {
+            // Define the test run ID as a variable
+            def TEST_RUN_ID = '13'
+            def TEST_CASE_ID = '1'
+            
+            withCredentials([usernamePassword(
+                credentialsId: 'jenkins_testrail',
+                usernameVariable: 'TESTRAIL_USER',
+                passwordVariable: 'TESTRAIL_API_KEY'
+            )]) {
+                sh """
+                    echo "=== Reporting Final Results to TestRail ==="
+                    
+                    # Use the actual build status
+                    if [ "\$currentBuild.result" = "SUCCESS" ]; then
+                        STATUS_ID=1
+                        COMMENT="Jenkins Build \${BUILD_NUMBER} - SUCCESS"
+                    else
+                        STATUS_ID=5
+                        COMMENT="Jenkins Build \${BUILD_NUMBER} - FAILED"
+                    fi
+                    
+                    echo "Reporting to TestRail: Status ID \$STATUS_ID"
+                    
+                    # TestRail reporting with variables
+                    curl -s -X POST \\
+                      -H "Content-Type: application/json" \\
+                      -u "\$TESTRAIL_USER:\$TESTRAIL_API_KEY" \\
+                      -d "{\\"status_id\\": \$STATUS_ID, \\"comment\\": \\"\$COMMENT\\"}" \\
+                      "https://smartfalleh.testrail.io/index.php?/api/v2/add_result_for_case/${TEST_RUN_ID}/${TEST_CASE_ID}" \\
+                      && echo "✅ TestRail reporting successful" \\
+                      || echo "⚠️ TestRail reporting failed - but build continues"
+                """
             }
         }
-    } 
+    }
+}
 
     post {
         always {
