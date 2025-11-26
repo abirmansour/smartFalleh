@@ -14,20 +14,23 @@ pipeline {
     }
     
     environment {
+        // Database
         DATABASE_URL = 'mysql://root:root@localhost:3306/smartfallah'
         JWT_SECRET = credentials('jwt_key')
         REACT_APP_API_URL = 'http://localhost:3001'
 
-        // docker 
+        // Docker 
         DOCKER_REGISTRY = 'doffy01'
         DOCKER_IMAGE_BACKEND = 'smartfalleh'      
         DOCKER_IMAGE_FRONTEND = 'smartfalleh'     
         DOCKER_TAG = "${env.BUILD_NUMBER}"
 
-        // testrail env var
+        // TestRail Configuration
         TESTRAIL_URL = 'https://smartfalleh.testrail.io'
         TESTRAIL_PROJECT_ID = '2' 
         TESTRAIL_SUITE_ID = '1'
+        TESTRAIL_RUN_ID = '13'
+        TESTRAIL_CASE_ID = '38'
     }
     
     stages {
@@ -192,33 +195,33 @@ ENDOFFILE
         }
 
         stage('Build Docker Images') {
-    steps {
-        script {
-            withCredentials([usernamePassword(
-                credentialsId: 'docker_jenkins',
-                usernameVariable: 'DOCKER_HUB_USER',      
-                passwordVariable: 'DOCKER_HUB_PASSWORD'   
-            )]) {
-                echo "Building Docker images..."
-                sh '''
-                    # Login to Docker Hub first
-                    echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USER" --password-stdin
-                    
-                    echo "Building backend Docker image..."
-                    docker build \
-                        -t ${DOCKER_REGISTRY}/smartfalleh:backend-${DOCKER_TAG} \
-                        --build-arg NODE_ENV=production \
-                        -f backend/Dockerfile ./backend || echo "Backend Docker build failed but continuing"
-                    
-                    echo "Building frontend Docker image..."
-                    docker build \
-                        -t ${DOCKER_REGISTRY}/smartfalleh:frontend-${DOCKER_TAG} \
-                        -f frontend/Dockerfile ./frontend || echo "Frontend Docker build failed but continuing"
-                '''
+            steps {
+                script {
+                    withCredentials([usernamePassword(
+                        credentialsId: 'docker_jenkins',
+                        usernameVariable: 'DOCKER_HUB_USER',      
+                        passwordVariable: 'DOCKER_HUB_PASSWORD'   
+                    )]) {
+                        echo "Building Docker images..."
+                        sh '''
+                            # Login to Docker Hub first
+                            echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USER" --password-stdin
+                            
+                            echo "Building backend Docker image..."
+                            docker build \
+                                -t ${DOCKER_REGISTRY}/smartfalleh:backend-${DOCKER_TAG} \
+                                --build-arg NODE_ENV=production \
+                                -f backend/Dockerfile ./backend || echo "Backend Docker build failed but continuing"
+                            
+                            echo "Building frontend Docker image..."
+                            docker build \
+                                -t ${DOCKER_REGISTRY}/smartfalleh:frontend-${DOCKER_TAG} \
+                                -f frontend/Dockerfile ./frontend || echo "Frontend Docker build failed but continuing"
+                        '''
+                    }
+                }
             }
         }
-    }
-}
 
         stage('Push Docker Images') {
             steps {
@@ -242,47 +245,45 @@ ENDOFFILE
             }
         }
         
-stage('Report to TestRail') {
-    steps {
-        script {
-            def TEST_RUN_ID = '13'
-            def TEST_CASE_ID = '38'  
-            
-            withCredentials([usernamePassword(
-                credentialsId: 'jenkins_testrail',
-                usernameVariable: 'TESTRAIL_USER',
-                passwordVariable: 'TESTRAIL_API_KEY'
-            )]) {
-                sh '''
-                    echo "=== Reporting Final Results to TestRail ==="
-                    
-                    # Determine status based on build result
-                    if [ "${currentBuild.currentResult}" = "SUCCESS" ]; then
-                        STATUS_ID=1
-                        COMMENT="Jenkins Build ${BUILD_NUMBER} - SUCCESS"
-                    else
-                        STATUS_ID=5
-                        COMMENT="Jenkins Build ${BUILD_NUMBER} - FAILED"
-                    fi
-                    
-                    echo "Build Status: ${currentBuild.currentResult}"
-                    echo "Reporting to TestRail: Status ID $STATUS_ID"
-                    echo "Comment: $COMMENT"
-                    
-                    # TestRail reporting
-                    curl -s -X POST \\
-                      -H "Content-Type: application/json" \\
-                      -u "$TESTRAIL_USER:$TESTRAIL_API_KEY" \\
-                      -d "{\\"status_id\\": $STATUS_ID, \\"comment\\": \\"$COMMENT\\"}" \\
-                      "https://smartfalleh.testrail.io/index.php?/api/v2/add_result_for_case/''' + TEST_RUN_ID + '''/''' + TEST_CASE_ID + '''" \\
-                      && echo "✅ TestRail reporting successful" \\
-                      || echo "⚠️ TestRail reporting failed - but build continues"
-                '''
+        stage('Report to TestRail') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(
+                        credentialsId: 'jenkins_testrail',
+                        usernameVariable: 'TESTRAIL_USER',
+                        passwordVariable: 'TESTRAIL_API_KEY'
+                    )]) {
+                        sh """
+                            echo "=== Reporting Final Results to TestRail ==="
+                            
+                            # Determine status based on build result
+                            if [ "${currentBuild.currentResult}" = "SUCCESS" ]; then
+                                STATUS_ID=1
+                                COMMENT="Jenkins Build ${BUILD_NUMBER} - SUCCESS"
+                            else
+                                STATUS_ID=5
+                                COMMENT="Jenkins Build ${BUILD_NUMBER} - FAILED"
+                            fi
+                            
+                            echo "Build Status: ${currentBuild.currentResult}"
+                            echo "Reporting to TestRail: Status ID \$STATUS_ID"
+                            echo "Comment: \$COMMENT"
+                            
+                            # TestRail reporting
+                            curl -s -X POST \\
+                              -H "Content-Type: application/json" \\
+                              -u "\$TESTRAIL_USER:\$TESTRAIL_API_KEY" \\
+                              -d "{\\"status_id\\": \$STATUS_ID, \\"comment\\": \\"\$COMMENT\\"}" \\
+                              "${TESTRAIL_URL}/index.php?/api/v2/add_result_for_case/${TESTRAIL_RUN_ID}/${TESTRAIL_CASE_ID}" \\
+                              && echo "✅ TestRail reporting successful" \\
+                              || echo "⚠️ TestRail reporting failed - but build continues"
+                        """
+                    }
+                }
             }
         }
     }
-}
-    }
+    
     post {
         always {
             // Archive test results
