@@ -10,6 +10,7 @@ pipeline {
         timeout(time: 60, unit: 'MINUTES')
         buildDiscarder(logRotator(numToKeepStr: '10'))
         disableConcurrentBuilds()
+        retry(3) // retry for entire pipeline
     }
     
     environment {
@@ -32,7 +33,25 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                checkout scm
+                retry(3) {
+                    checkout([
+                        $class: 'GitSCM',
+                        branches: [[name: '*/HybaRepo']],
+                        extensions: [
+                            [
+                                $class: 'CloneOption',
+                                shallow: true,
+                                depth: 1,
+                                timeout: 30,
+                                noTags: true
+                            ]
+                        ],
+                        userRemoteConfigs: [[
+                            url: 'https://github.com/abirmansour/smartFalleh.git',
+                            credentialsId: 'fb1fa891-403c-459c-8ba0-97ff897a3eee'
+                        ]]
+                    ])
+                }
             }
         }
         
