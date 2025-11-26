@@ -280,8 +280,9 @@ stage('Report to TestRail') {
             }
         }
     }
-}
+  }
 
+    }
     post {
         always {
             // Archive test results
