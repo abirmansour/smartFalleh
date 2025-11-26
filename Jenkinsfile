@@ -192,24 +192,33 @@ ENDOFFILE
         }
 
         stage('Build Docker Images') {
-            steps {
-                script {
-                    echo "Building Docker images..."
-                    sh '''
-                        echo "Building backend Docker image..."
-                        docker build \
-                            -t ${DOCKER_REGISTRY}/smartfalleh:backend-${DOCKER_TAG} \
-                            --build-arg NODE_ENV=production \
-                            -f backend/Dockerfile ./backend || echo "Backend Docker build failed but continuing"
-                        
-                        echo "Building frontend Docker image..."
-                        docker build \
-                            -t ${DOCKER_REGISTRY}/smartfalleh:frontend-${DOCKER_TAG} \
-                            -f frontend/Dockerfile ./frontend || echo "Frontend Docker build failed but continuing"
-                    '''
-                }
+    steps {
+        script {
+            withCredentials([usernamePassword(
+                credentialsId: 'docker_jenkins',
+                usernameVariable: 'DOCKER_HUB_USER',      
+                passwordVariable: 'DOCKER_HUB_PASSWORD'   
+            )]) {
+                echo "Building Docker images..."
+                sh '''
+                    # Login to Docker Hub first
+                    echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USER" --password-stdin
+                    
+                    echo "Building backend Docker image..."
+                    docker build \
+                        -t ${DOCKER_REGISTRY}/smartfalleh:backend-${DOCKER_TAG} \
+                        --build-arg NODE_ENV=production \
+                        -f backend/Dockerfile ./backend || echo "Backend Docker build failed but continuing"
+                    
+                    echo "Building frontend Docker image..."
+                    docker build \
+                        -t ${DOCKER_REGISTRY}/smartfalleh:frontend-${DOCKER_TAG} \
+                        -f frontend/Dockerfile ./frontend || echo "Frontend Docker build failed but continuing"
+                '''
             }
         }
+    }
+}
 
         stage('Push Docker Images') {
             steps {
