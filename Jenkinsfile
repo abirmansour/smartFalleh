@@ -245,9 +245,8 @@ ENDOFFILE
 stage('Report to TestRail') {
     steps {
         script {
-            // Define the test run ID as a variable
             def TEST_RUN_ID = '13'
-            def TEST_CASE_ID = '1'
+            def TEST_CASE_ID = '38'  
             
             withCredentials([usernamePassword(
                 credentialsId: 'jenkins_testrail',
@@ -257,22 +256,23 @@ stage('Report to TestRail') {
                 sh """
                     echo "=== Reporting Final Results to TestRail ==="
                     
-                    # Use the actual build status
-                    if [ "\$currentBuild.result" = "SUCCESS" ]; then
+                    # Correct status detection
+                    if [ "${currentBuild.currentResult}" = "SUCCESS" ]; then
                         STATUS_ID=1
-                        COMMENT="Jenkins Build \${BUILD_NUMBER} - SUCCESS"
+                        COMMENT="Jenkins Build ${env.BUILD_NUMBER} - SUCCESS"
                     else
                         STATUS_ID=5
-                        COMMENT="Jenkins Build \${BUILD_NUMBER} - FAILED"
+                        COMMENT="Jenkins Build ${env.BUILD_NUMBER} - FAILED"
                     fi
                     
+                    echo "Build Status: ${currentBuild.currentResult}"
                     echo "Reporting to TestRail: Status ID \$STATUS_ID"
                     
-                    # TestRail reporting with variables
+                    # TestRail reporting
                     curl -s -X POST \\
                       -H "Content-Type: application/json" \\
-                      -u "\$TESTRAIL_USER:\$TESTRAIL_API_KEY" \\
-                      -d "{\\"status_id\\": \$STATUS_ID, \\"comment\\": \\"\$COMMENT\\"}" \\
+                      -u "$TESTRAIL_USER:$TESTRAIL_API_KEY" \\
+                      -d "{\\"status_id\\": \$STATUS_ID, \\"comment\\": \\"$COMMENT\\"}" \\
                       "https://smartfalleh.testrail.io/index.php?/api/v2/add_result_for_case/${TEST_RUN_ID}/${TEST_CASE_ID}" \\
                       && echo "✅ TestRail reporting successful" \\
                       || echo "⚠️ TestRail reporting failed - but build continues"
@@ -280,7 +280,7 @@ stage('Report to TestRail') {
             }
         }
     }
-  }
+}
 
     }
     post {
