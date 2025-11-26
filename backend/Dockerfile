@@ -7,6 +7,11 @@ WORKDIR /app
 COPY package*.json ./
 COPY tsconfig*.json ./
 
+# Use network timeout options and retry
+RUN npm config set fetch-retry-maxtimeout 600000 && \
+    npm config set fetch-retry-mintimeout 10000 && \
+    npm ci --no-progress
+
 # Install dependencies
 RUN npm ci
 
