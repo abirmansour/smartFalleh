@@ -45,10 +45,6 @@ pipeline {
                                 timeout: 120,
                                 noTags: true
                             ],
-                             [
-                        $class: 'TimeoutOption',
-                        timeout: 120   //overall timeout
-                    ]
                         ],
                         userRemoteConfigs: [[
                             url: 'https://github.com/abirmansour/smartFalleh.git',
