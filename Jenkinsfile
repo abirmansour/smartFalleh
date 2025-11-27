@@ -260,31 +260,34 @@ ENDOFFILE
                     if [ "''' + currentBuild.currentResult + '''" = "SUCCESS" ]; then
                         STATUS_ID=1
                         STATUS_TEXT="Passed"
-                        COMMENT="✅ Jenkins Build ''' + BUILD_NUMBER + ''' - SUCCESS\\n• Frontend tests: PASSED\\n• Backend build: SUCCESS\\n• Docker images built and pushed\\n• Security scan completed"
+                        COMMENT="✅ Jenkins Build ''' + BUILD_NUMBER + ''' - SUCCESS"
                     else
                         STATUS_ID=5
-                        STATUS_TEXT="Failed"
-                        COMMENT="❌ Jenkins Build ''' + BUILD_NUMBER + ''' - FAILED\\n• Build failed in pipeline\\n• Check Jenkins logs for details"
+                        STATUS_TEXT="Failed" 
+                        COMMENT="❌ Jenkins Build ''' + BUILD_NUMBER + ''' - FAILED"
                     fi
                     
                     echo "Build Status: ''' + currentBuild.currentResult + '''"
                     echo "TestRail Status: $STATUS_TEXT (ID: $STATUS_ID)"
                     
-                    # Report result to TestRail
-                    RESPONSE=$(curl -s -w "%{http_code}" -X POST \\
+                    # Create a temporary file for the response
+                    RESPONSE_FILE=$(mktemp)
+                    
+                    # Report result to TestRail with better output handling
+                    HTTP_CODE=$(curl -s -w "%{http_code}" -o "$RESPONSE_FILE" -X POST \\
                       -H "Content-Type: application/json" \\
                       -u "$TESTRAIL_USER:$TESTRAIL_API_KEY" \\
                       -d "{
                         \\"status_id\\": $STATUS_ID,
                         \\"comment\\": \\"$COMMENT\\",
                         \\"version\\": \\"Build ''' + BUILD_NUMBER + '''\\",
-                        \\"elapsed\\": \\"1m\\",
-                        \\"defects\\": \\"\\"
+                        \\"elapsed\\": \\"1m\\"
                       }" \\
                       "''' + TESTRAIL_URL + '''/index.php?/api/v2/add_result_for_case/''' + TESTRAIL_RUN_ID + '''/''' + TESTRAIL_CASE_ID + '''")
                     
-                    HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-                    RESPONSE_BODY=$(echo "$RESPONSE" | head -n -1)
+                    # Read the response body
+                    RESPONSE_BODY=$(cat "$RESPONSE_FILE")
+                    rm -f "$RESPONSE_FILE"
                     
                     echo "TestRail Response: $RESPONSE_BODY"
                     echo "HTTP Status Code: $HTTP_CODE"
@@ -292,16 +295,17 @@ ENDOFFILE
                     if [ "$HTTP_CODE" = "200" ]; then
                         echo "✅ TestRail reporting SUCCESSFUL!"
                         echo "📊 View results at: ''' + TESTRAIL_URL + '''/index.php?/runs/view/''' + TESTRAIL_RUN_ID + '''"
+                        echo "🎯 Result ID: $(echo "$RESPONSE_BODY" | grep -o '"id":[0-9]*' | cut -d: -f2)"
                     else
                         echo "⚠️ TestRail reporting completed with warnings"
-                        echo "Response: $RESPONSE_BODY"
+                        echo "HTTP Code: $HTTP_CODE"
                     fi
                 '''
             }
         }
     }
 }
-    }
+    }// end of stages 
     
     post {
         always {
