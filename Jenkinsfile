@@ -27,8 +27,6 @@ pipeline {
 
         // TestRail Configuration
         TESTRAIL_URL = 'https://smartfalleh.testrail.io'
-        TESTRAIL_PROJECT_ID = '2' 
-        TESTRAIL_SUITE_ID = '1'
         TESTRAIL_RUN_ID = '13'
         TESTRAIL_CASE_ID = '38'
     }
@@ -246,42 +244,63 @@ ENDOFFILE
         }
         
         stage('Report to TestRail') {
-            steps {
-                script {
-                    withCredentials([usernamePassword(
-                        credentialsId: 'jenkins_testrail',
-                        usernameVariable: 'TESTRAIL_USER',
-                        passwordVariable: 'TESTRAIL_API_KEY'
-                    )]) {
-                        sh """
-                            echo "=== Reporting Final Results to TestRail ==="
-                            
-                            # Determine status based on build result
-                            if [ "${currentBuild.currentResult}" = "SUCCESS" ]; then
-                                STATUS_ID=1
-                                COMMENT="Jenkins Build ${BUILD_NUMBER} - SUCCESS"
-                            else
-                                STATUS_ID=5
-                                COMMENT="Jenkins Build ${BUILD_NUMBER} - FAILED"
-                            fi
-                            
-                            echo "Build Status: ${currentBuild.currentResult}"
-                            echo "Reporting to TestRail: Status ID \$STATUS_ID"
-                            echo "Comment: \$COMMENT"
-                            
-                            # TestRail reporting
-                            curl -s -X POST \\
-                              -H "Content-Type: application/json" \\
-                              -u "\$TESTRAIL_USER:\$TESTRAIL_API_KEY" \\
-                              -d "{\\"status_id\\": \$STATUS_ID, \\"comment\\": \\"\$COMMENT\\"}" \\
-                              "${TESTRAIL_URL}/index.php?/api/v2/add_result_for_case/${TESTRAIL_RUN_ID}/${TESTRAIL_CASE_ID}" \\
-                              && echo "✅ TestRail reporting successful" \\
-                              || echo "⚠️ TestRail reporting failed - but build continues"
-                        """
-                    }
-                }
+    steps {
+        script {
+            withCredentials([usernamePassword(
+                credentialsId: 'jenkins_testrail',
+                usernameVariable: 'TESTRAIL_USER',
+                passwordVariable: 'TESTRAIL_API_KEY'
+            )]) {
+                sh '''
+                    echo "=== Reporting to TestRail ==="
+                    echo "Test Run: ''' + TESTRAIL_RUN_ID + '''"
+                    echo "Test Case: ''' + TESTRAIL_CASE_ID + '''"
+                    
+                    # Determine status based on build result
+                    if [ "''' + currentBuild.currentResult + '''" = "SUCCESS" ]; then
+                        STATUS_ID=1
+                        STATUS_TEXT="Passed"
+                        COMMENT="✅ Jenkins Build ''' + BUILD_NUMBER + ''' - SUCCESS\\n• Frontend tests: PASSED\\n• Backend build: SUCCESS\\n• Docker images built and pushed\\n• Security scan completed"
+                    else
+                        STATUS_ID=5
+                        STATUS_TEXT="Failed"
+                        COMMENT="❌ Jenkins Build ''' + BUILD_NUMBER + ''' - FAILED\\n• Build failed in pipeline\\n• Check Jenkins logs for details"
+                    fi
+                    
+                    echo "Build Status: ''' + currentBuild.currentResult + '''"
+                    echo "TestRail Status: $STATUS_TEXT (ID: $STATUS_ID)"
+                    
+                    # Report result to TestRail
+                    RESPONSE=$(curl -s -w "%{http_code}" -X POST \\
+                      -H "Content-Type: application/json" \\
+                      -u "$TESTRAIL_USER:$TESTRAIL_API_KEY" \\
+                      -d "{
+                        \\"status_id\\": $STATUS_ID,
+                        \\"comment\\": \\"$COMMENT\\",
+                        \\"version\\": \\"Build ''' + BUILD_NUMBER + '''\\",
+                        \\"elapsed\\": \\"1m\\",
+                        \\"defects\\": \\"\\"
+                      }" \\
+                      "''' + TESTRAIL_URL + '''/index.php?/api/v2/add_result_for_case/''' + TESTRAIL_RUN_ID + '''/''' + TESTRAIL_CASE_ID + '''")
+                    
+                    HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+                    RESPONSE_BODY=$(echo "$RESPONSE" | head -n -1)
+                    
+                    echo "TestRail Response: $RESPONSE_BODY"
+                    echo "HTTP Status Code: $HTTP_CODE"
+                    
+                    if [ "$HTTP_CODE" = "200" ]; then
+                        echo "✅ TestRail reporting SUCCESSFUL!"
+                        echo "📊 View results at: ''' + TESTRAIL_URL + '''/index.php?/runs/view/''' + TESTRAIL_RUN_ID + '''"
+                    else
+                        echo "⚠️ TestRail reporting completed with warnings"
+                        echo "Response: $RESPONSE_BODY"
+                    fi
+                '''
             }
         }
+    }
+}
     }
     
     post {
