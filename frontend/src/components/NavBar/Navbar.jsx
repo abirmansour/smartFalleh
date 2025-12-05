@@ -4,13 +4,11 @@ import { useState, useEffect } from 'react';
 import Modal from "../Modal/Modal";
 import Login from '../Connextion/LoginPage2';
 import Demande from '../demande/Demande'; // ✅ استيراد الفورم
-import { FiMenu, FiX } from 'react-icons/fi';
 import './Navbar.css';
 
 export default function Navbar() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isDemandeModalOpen, setIsDemandeModalOpen] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
 
@@ -23,11 +21,6 @@ export default function Navbar() {
     }
   }, []);
 
-  const handleLogout = () => {
-    localStorage.clear();
-    setUser(null);
-    navigate("/login");
-  };
 
   const handleSuccessfulLogin = () => {
     const token = localStorage.getItem("token");
@@ -73,7 +66,7 @@ export default function Navbar() {
                 Demande
               </button>
               <button 
-                onClick={() => navigate("/login2")} 
+                onClick={() => navigate("/login")} 
                 className="btn-login"
               >
                 Se connecter

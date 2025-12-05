@@ -23,7 +23,6 @@ export class Demande {
   @Column()
   region: string;
 
-  // ⚠️ لازم تكون رقمية
   @Column('float')
   superficieFerme: number;
 
@@ -38,4 +37,22 @@ export class Demande {
 
   @Column({ default: 'En attente' })
   statut: string;
+
+  @Column({ nullable: true })
+  referenceVache?: string;
+
+  @Column({ type: 'int', nullable: true })
+  validateNombreVaches?: number;
+
+  @Column({ type: 'text', nullable: true })
+  notes?: string;
+
+  @Column({ type: 'boolean', nullable: true })
+  eligible?: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  validatedAt?: Date;
+
+  @Column({ nullable: true })
+  validatedBy?: string;
 }

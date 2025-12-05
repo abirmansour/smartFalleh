@@ -1,7 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="jest tests" tests="1" failures="0" errors="0" time="1.484">
-  <testsuite name="undefined" errors="0" failures="0" skipped="0" timestamp="2025-11-25T21:38:57" time="0.889" tests="1">
-    <testcase classname=" renders app" name=" renders app" time="0.025">
+<testsuites name="Frontend Tests" tests="6" failures="0" errors="0" time="1.23">
+  <testsuite name="ATDD - Gestion des demandes agricoles" errors="0" failures="0" skipped="0" timestamp="2025-11-30T08:31:03" time="0.715" tests="6">
+    <testcase classname="ATDD - Gestion des demandes agricoles" name="AGRIC 1: Échec création demande avec champs obligatoires vides" time="0.004">
+    </testcase>
+    <testcase classname="ATDD - Gestion des demandes agricoles" name="AGRIC 2: Création demande valide envoie email et notifie admin" time="0.001">
+    </testcase>
+    <testcase classname="ATDD - Gestion des demandes agricoles" name="ADMIN 1: Filtrage demandes avec plus de 20 vaches" time="0.002">
+    </testcase>
+    <testcase classname="ATDD - Gestion des demandes agricoles" name="ADMIN 2: Approbation demande et assignation au jury" time="0.001">
+    </testcase>
+    <testcase classname="ATDD - Gestion des demandes agricoles" name="JURY 1: Échec soumission formulaire évaluation avec champs vides" time="0.001">
+    </testcase>
+    <testcase classname="ATDD - Gestion des demandes agricoles" name="JURY 2: Évaluation favorable et envoi lien mobile" time="0">
     </testcase>
   </testsuite>
 </testsuites>

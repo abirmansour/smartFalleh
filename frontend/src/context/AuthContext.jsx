@@ -1,5 +1,4 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { UserRole } from '../constants/roles';
 
 const AuthContext = createContext({
   user: null,
@@ -35,22 +34,40 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, []);
 
-  const login = async () => {
+  const login = async (email, password) => {
     try {
- 
-      // For demo purposes
-      const mockResponse = {
-        token: 'mock-jwt-token',
-        role: UserRole.ADMIN // Default to ADMIN for demo
-      };
+      // Make API call to your backend
+      const response = await fetch('http://localhost:3000/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Login failed');
+      }
+
+      const data = await response.json();
       
-      localStorage.setItem('token', mockResponse.token);
-      localStorage.setItem('role', mockResponse.role);
+      // Save user data to localStorage
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('role', data.role);
+      localStorage.setItem('id', data.id);
+      localStorage.setItem('email', data.email);
       
-      setUser({ token: mockResponse.token });
-      setUserRole(mockResponse.role);
+      // Update auth state
+      setUser({ 
+        token: data.token,
+        id: data.id,
+        email: data.email,
+        role: data.role
+      });
+      setUserRole(data.role);
       
-      return { success: true, role: mockResponse.role };
+      return { success: true, role: data.role };
     } catch (error) {
       console.error('Login failed:', error);
       return { success: false, error: error.message };

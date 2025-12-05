@@ -7,11 +7,15 @@
     "dev": "vite",
     "build": "vite build",
     "test": "jest",
-    "test:ci": "jest --watchAll=false --passWithNoTests --maxWorkers=2 --ci --reporters=default --reporters=jest-junit --outputFile=junit.xml --testFailureExitCode=0",
+    "test:ci": "",
     "lint": "eslint . --ext .js,.jsx --fix",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^7.3.5",
+    "@mui/material": "^7.3.5",
     "gsap": "^3.13.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",

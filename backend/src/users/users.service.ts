@@ -100,6 +100,8 @@ export class UsersService {
       );
     }
 
+    // Remove sensitive information before returning
+    delete (savedUser as any).password;
     return savedUser;
   }
 
@@ -189,5 +191,14 @@ export class UsersService {
   // 📧 Trouver par email
   async findByEmail(email: string): Promise<User | null> {
     return this.userRepository.findOneBy({ email });
+  }
+
+  // 📧 Trouver par email (inclut mot de passe)
+  async findByEmailWithPassword(email: string): Promise<User | null> {
+    return this.userRepository
+      .createQueryBuilder('user')
+      .addSelect('user.password')
+      .where('user.email = :email', { email })
+      .getOne();
   }
 }

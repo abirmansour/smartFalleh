@@ -114,7 +114,7 @@ export const responsableMenuItems = [
   },
   {
     title: 'Rapports',
-    path: '/reports',
+    path: 'rapports',
     icon: createIcon(FiFileText),
     allowedRoles: [UserRole.RESPONSABLE, UserRole.ADMIN],
   },
@@ -136,13 +136,19 @@ export const responsableMenuItems = [
 export const juryMenuItems = [
   {
     title: 'Tableau de bord',
-    path: '/dashboard',
+    path: '',  
     icon: createIcon(FiHome),
     allowedRoles: [UserRole.JURY],
   },
   {
+    title: 'Liste des agriculteurs',
+    path: 'liste-agriculteurs',  
+    icon: createIcon(FiUsers),
+    allowedRoles: [UserRole.JURY],
+  },
+  {
     title: 'Évaluations',
-    path: '/evaluations',
+    path: 'evaluation-jury/:id',  
     icon: createIcon(FiClipboard),
     allowedRoles: [UserRole.JURY],
   },

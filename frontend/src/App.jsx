@@ -6,7 +6,6 @@ import { scroller } from 'react-scroll';
 import Accueil from './components/Accueil/Accueil';
 import About from './components/About/About';
 import Contact from './components/Contact/Contact';
-import Login from './components/Connextion/Login';
 
 // Components
 import Dashboard from './components/dashbaord/Dashboard';
@@ -23,6 +22,9 @@ import LoginPage2 from './components/Connextion/LoginPage2';
 import ForgotPassword from './components/Forgot-password/forgot-password'
 import ResetPassword from './components/ResetPassword/resetPassword'
 import Profile from './components/Profile/Profile'
+import ListeAgriculteursJury from './components/jury/ListeAgriculteursJury';
+import EvaluationJury from './components/jury/EvaluationJury';
+import Rapports from './components/responsable/Rapports';
 
 // Vérifier rôle depuis localStorage
 function ProtectedRoute({ children, requiredRoles }) {
@@ -60,8 +62,7 @@ export default function App() {
       <Routes>
         {/* Routes publiques */}
         <Route path="/" element={<PublicLayout><Accueil /><About /><Contact /></PublicLayout>} />
-        <Route path="/login" element={<PublicLayout><Login /></PublicLayout>} />
-        <Route path="/login2" element={<LoginPage2 />} />
+        <Route path="/login" element={<PublicLayout><LoginPage2 /></PublicLayout>} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
@@ -80,9 +81,20 @@ export default function App() {
           <Route path="administration/demande" element={<ListDemande />} />
           <Route path="administration/responsable" element={<ResponsableListPage />} />
           <Route path="profile" element={<Profile />} />
+          
+          {/* Jury specific routes */}
+          <Route path="liste-agriculteurs" element={<ListeAgriculteursJury />} />
+          <Route path="evaluation-jury/:id" element={<EvaluationJury />} />
+
+          {/*responsable specific routes*/}
+          <Route path="rapports" element={<Rapports />} />
+
         </Route>
         {/* Redirect old admin routes to new dashboard */}
         <Route path="/admin/*" element={<Navigate to="/dashboard" replace />} />
+
+
+       
 
         {/* Unauthorized */}
         <Route path="/unauthorized" element={

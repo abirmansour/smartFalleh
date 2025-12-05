@@ -12,10 +12,10 @@ export class AuthService {
 
   // Vérifie si l'utilisateur existe et le mot de passe est correct
   async validateUser(email: string, password: string): Promise<any> {
-    const user = await this.usersService.findByEmail(email);
+    const user = await this.usersService.findByEmailWithPassword(email);
     if (!user) return null;
 
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = user.password && (await bcrypt.compare(password, user.password));
     if (!isMatch) return null;
 
     if (user.etat !== 'active') {

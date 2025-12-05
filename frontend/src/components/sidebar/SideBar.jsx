@@ -88,7 +88,6 @@ const SideBar = ({ onClose }) => {
   const { userRole, logout } = useAuth();
   const [openItems, setOpenItems] = useState({});
   const [isOpen, setIsOpen] = useState(false);
-  const navigate = useNavigate();
   const location = useLocation();
   
   const menuItems = getAllMenuItems(userRole);

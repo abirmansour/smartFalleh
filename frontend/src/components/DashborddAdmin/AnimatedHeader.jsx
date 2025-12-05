@@ -24,15 +24,25 @@ export default function AnimatedHeader() {
   slidesRef.current = [];
   textRef.current = [];
 
+  const tl = useRef();
+  
+  const pauseOnHover = () => {
+    if (tl.current) tl.current.pause();
+  };
+
+  const resumeOnLeave = () => {
+    if (tl.current) tl.current.play();
+  };
+
   useEffect(() => {
-    const tl = gsap.timeline({ repeat: -1, repeatDelay: 0.5 });
+    tl.current = gsap.timeline({ repeat: -1, repeatDelay: 0.5 });
 
     slides.forEach((_, i) => {
       const slideEl = slidesRef.current[i];
       const txtEl = textRef.current[i];
 
       // in: from right with tilt
-      tl.fromTo(
+      tl.current.fromTo(
         slideEl,
         {
           xPercent: 100,
@@ -51,7 +61,7 @@ export default function AnimatedHeader() {
       );
 
       // text fade in
-      tl.fromTo(
+      tl.current.fromTo(
         txtEl,
         { y: 30, autoAlpha: 0 },
         { duration: 0.8, y: 0, autoAlpha: 1, ease: "power3.out" },
@@ -59,10 +69,10 @@ export default function AnimatedHeader() {
       );
 
       // stay visible
-      tl.to({}, { duration: 2.2 }); // pause
+      tl.current.to({}, { duration: 2.2 }); // pause
 
       // out: to left with opposite tilt
-      tl.to(
+      tl.current.to(
         [slideEl, txtEl],
         {
           duration: 0.9,
@@ -75,7 +85,7 @@ export default function AnimatedHeader() {
       );
 
       // reset instant for next loop (so next slide starts offscreen right)
-      tl.set([slideEl, txtEl], { xPercent: 100, rotateY: -12, autoAlpha: 1 });
+      tl.current.set([slideEl, txtEl], { xPercent: 100, rotateY: -12, autoAlpha: 1 });
     });
 
     // optional: pause on hover
@@ -84,7 +94,9 @@ export default function AnimatedHeader() {
     container.addEventListener("mouseleave", resumeOnLeave);
 
     return () => {
-      tl.kill();
+      if (tl.current) {
+        tl.current.kill();
+      }
       container.removeEventListener("mouseenter", pauseOnHover);
       container.removeEventListener("mouseleave", resumeOnLeave);
     };

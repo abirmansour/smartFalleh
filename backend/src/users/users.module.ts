@@ -3,9 +3,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
 import { User } from './entities/user.entity';
-import { MailService } from 'src/mail/mail.service';
+import { MailService } from '../mail/mail.service';
 import { JwtModule } from '@nestjs/jwt';
-import { Cooperative } from 'src/cooperative/entities/cooperative.entity';
+import { Cooperative } from '../cooperative/entities/cooperative.entity';
 import { DemandeModule } from '../demande/demande.module';
 
 @Module({
@@ -13,7 +13,7 @@ import { DemandeModule } from '../demande/demande.module';
     TypeOrmModule.forFeature([User, Cooperative]), forwardRef(() => DemandeModule),
     
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'secretKey', // ⚙️ مفتاح التوقيع
+      secret: process.env.JWT_SECRET || 'secretKey',
       signOptions: { expiresIn: '1h' },
     }),
   ],

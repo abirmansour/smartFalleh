@@ -118,26 +118,38 @@
   overflow: hidden;
 }
 
-/* 👇 طبقة ضبابية فوق الخلفية */
-.login2-wrapper::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  backdrop-filter: blur(10px); /* 🔥 هذا هو البلور */
-  background-color: rgba(10, 10, 10, 0.2); /* شفافية خفيفة */
-  z-index: 0;
+/* Hide navbar when login modal is open */
+body.login-modal-open .navbar {
+  display: none;
 }
 
-/* الحاوية البيضاء اللي فيها الفورم والصورة */
+/* Modal overlay */
+.login2-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(0, 0, 0, 0.7);
+  z-index: 1000;
+  padding: 20px;
+}
+
+/* Main container */
 .login2-container {
   display: flex;
   background: #fff;
-  border-radius: 20px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   overflow: hidden;
   width: 900px;
   max-width: 95%;
-  height: 500px;
+  max-height: 90vh;
+  position: relative;
+  z-index: 2;
   position: relative;
   z-index: 1; /* فوق طبقة البلور */
 }
@@ -173,70 +185,145 @@
 }
 
 /* الفورم */
-.login2-formA input {
-  width: 92%;
-  padding: 0.85rem 1rem;
-  border: 1px solid #cbd5e1;
-  border-radius: 0.5rem;
-  margin-bottom: 1rem;
-  color: #1e293b; /* لون النص */
-  background-color: #fff; /* ✅ أبيض */
-  font-size: 1rem;
-  transition: border 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
-}
-
-.login2-formA input:focus {
-  border-color: #22c55e;
-  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
-  outline: none;
-  background-color: #fff; /* ✅ يبقى أبيض حتى وقت التركيز */
-}
-
-
-.login2-formA button {
+.login2-form {
+  padding: 40px;
   width: 100%;
-  padding: 0.85rem 1rem;
-  background-color: #007f3f;
-  color: white;
-  font-weight: 600;
-  border-radius: 0.5rem;
-  transition: background 0.3s;
-  cursor: pointer;
-  border: none;
-  font-size: 1rem;
+  max-width: 400px;
 }
 
+.login2-form input {
+  width: 100%;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  background-color: #f8f9fa;
+}
 
-.login2-formA button:hover {
-  background-color: #16a34a;
+.login2-form input:focus {
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+  outline: none;
+  background-color: #fff;
+}
+
+.login2-form button {
+  width: 100%;
+  padding: 14px;
+  background-color: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 10px;
+}
+
+.login2-form button:hover {
+  background-color: #357abd;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.login2-form button:active {
+  transform: translateY(0);
+}
+
+.login2-form button:disabled {
+  background-color: #a0c4f9;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.error-message {
+  color: #e74c3c;
+  margin: 10px 0;
+  font-size: 14px;
+  text-align: center;
+  background-color: #fde8e8;
+  padding: 10px;
+  border-radius: 6px;
+  border-left: 4px solid #e74c3c;
 }
 
 .forgot-password {
   text-align: center;
-  margin-top: 0.8rem;
-  font-size: 0.9rem;
-  color: #1e293b;
+  margin-top: 20px;
+  color: #666;
 }
 
 .forgot-password a {
-  color: #22c55e;
-  font-weight: 500;
+  color: #4a90e2;
   text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s ease;
 }
 
 .forgot-password a:hover {
+  color: #357abd;
   text-decoration: underline;
 }
 
-/* الجهة اليمين - الصورة */
+.title {
+  color: #2c3e50;
+  margin-bottom: 30px;
+  text-align: center;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.logo {
+  text-align: center;
+  font-size: 32px;
+  margin-bottom: 10px;
+  color: #2c3e50;
+}
+
+@media (max-width: 768px) {
+  .login2-container {
+    flex-direction: column;
+    height: auto;
+  }
+  
+  .login2-left {
+    width: 100%;
+    padding: 30px 20px;
+  }
+  
+  .login2-right {
+    display: none;
+  }
+  
+  .login2-form {
+    padding: 20px;
+  }
+  
+  .title {
+    font-size: 24px;
+    margin-bottom: 20px;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.login2-content {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
 .login2-right {
   flex: 1;
   background-color: #f0fdf4;
   display: flex;
   justify-content: center;
   align-items: center;
-  
-  
 }
 
 .image-frame {

@@ -51,8 +51,7 @@
   background: none;
   border: none;
   font-size: 26px;
-  font-weight: 500;
-  color: #374151;
+  
   cursor: pointer;
   transition: color 0.2s ease, transform 0.1s ease;
 }
@@ -62,6 +61,11 @@
   transform: scale(1.1);
 }
 
+.close-btn{
+  background: transparent;
+  margin-bottom: 3rem;
+}
+
 .close-btn:hover {
   color: #000;
 }
@@ -69,6 +73,7 @@
 /* ======= HEADING ======= */
 .demande-heading {
   text-align: center;
+  margin-left: 21rem;
   font-size: 28px;
   font-weight: 700;
   color: #111827;

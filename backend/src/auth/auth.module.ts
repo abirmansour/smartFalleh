@@ -7,8 +7,8 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { TokenBlacklistService } from './token-blacklist.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from 'src/users/entities/user.entity';
-import { UsersModule } from 'src/users/users.module';
+import { User } from '../users/entities/user.entity';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [

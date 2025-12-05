@@ -60,10 +60,12 @@ export default function AjoutDemande({ onClose }) {
   return (
     <div className="demande-container">
       <form className="demande-card" onSubmit={handleSubmit}>
-        <button type="button" className="close-btn" onClick={onClose}>
-          ×
-        </button>
-        <h2 className="demande-heading">Demande</h2>
+        <div className="demande-header">
+          <h2 className="demande-heading">Demande</h2>
+          <button type="button" className="close-btn" onClick={onClose}>
+            ×
+          </button>
+        </div>
 
         {error && <div className="demande-error">{error}</div>}
 
@@ -98,8 +100,6 @@ export default function AjoutDemande({ onClose }) {
 
           <select name="role" value={formData.role} onChange={handleChange} className="demande-input select">
             <option value="Agriculteur">Agriculteur</option>
-            <option value="Jury">Jury</option>
-            <option value="Responsable">Responsable</option>
           </select>
         </div>
 
