@@ -1,0 +1,165 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: smartfalleh
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      initContainers:
+      - name: wait-for-db
+        image: busybox:1.28
+        command: ['sh', '-c', 
+          'until nc -z mysql-service 3306; do echo "Waiting for MySQL..."; sleep 2; done; echo "MySQL is ready!"']
+      containers:
+      - name: backend
+        image: doffy01/smartfalleh:backend-${BUILD_NUMBER}
+        ports:
+        - containerPort: 3000
+        env:
+        # Variables depuis ConfigMap
+        - name: NODE_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: backend-config
+              key: NODE_ENV
+        - name: PORT
+          valueFrom:
+            configMapKeyRef:
+              name: backend-config
+              key: PORT
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: backend-config
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: backend-config
+              key: DB_PORT
+        - name: DB_USERNAME
+          valueFrom:
+            configMapKeyRef:
+              name: backend-config
+              key: DB_USERNAME
+        - name: DB_DATABASE
+          valueFrom:
+            configMapKeyRef:
+              name: backend-config
+              key: DB_DATABASE
+        - name: FRONT_URL
+          valueFrom:
+            configMapKeyRef:
+              name: backend-config
+              key: FRONT_URL
+        - name: EMAIL_USER
+          valueFrom:
+            configMapKeyRef:
+              name: backend-config
+              key: EMAIL_USER
+        - name: USE_ETHEREAL
+          valueFrom:
+            configMapKeyRef:
+              name: backend-config
+              key: USE_ETHEREAL
+        - name: SMTP_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: backend-config
+              key: SMTP_HOST
+        - name: SMTP_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: backend-config
+              key: SMTP_PORT
+        - name: SMTP_USER
+          valueFrom:
+            configMapKeyRef:
+              name: backend-config
+              key: SMTP_USER
+        - name: SMTP_FROM
+          valueFrom:
+            configMapKeyRef:
+              name: backend-config
+              key: SMTP_FROM
+        
+        # Variables sensibles depuis Secret
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: backend-secret
+              key: DB_PASSWORD
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: backend-secret
+              key: JWT_SECRET
+        - name: SMTP_PASS
+          valueFrom:
+            secretKeyRef:
+              name: backend-secret
+              key: SMTP_PASS
+        
+        # Commandes pour migrer la base de données
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            # Attendre que MySQL soit vraiment prêt
+            sleep 10
+            # Exécuter les migrations Prisma
+            npx prisma migrate deploy
+            # Démarrer l'application
+            node dist/main.js
+        
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 20  
+          periodSeconds: 10
+          failureThreshold: 3
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 40
+          periodSeconds: 15
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        volumeMounts:
+        - name: prisma-schema
+          mountPath: /app/prisma
+      volumes:
+      - name: prisma-schema
+        configMap:
+          name: prisma-schema
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+  namespace: smartfalleh
+spec:
+  selector:
+    app: backend
+  ports:
+  - port: 3000
+    targetPort: 3000
+    name: http
+  - port: 5555
+    targetPort: 5555
+    name: prisma-studio
+  type: ClusterIP
