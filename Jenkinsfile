@@ -811,6 +811,7 @@ stage('Build Docker Images for Minikube') {
                     fi
                     
                     cd ..
+                fi
                     
             '''
             
