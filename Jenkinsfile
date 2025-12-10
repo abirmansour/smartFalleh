@@ -85,36 +85,70 @@ pipeline {
             }
         }
 
-          stage('Setup Environment') {
+        stage('Prerequisites') {
+            steps {
+                script {
+                    sh '''
+                        echo "Installing required tools..."
+                        
+                        # Mettre à jour les paquets (pour Debian/Ubuntu)
+                        if [ -f /etc/debian_version ]; then
+                            apt-get update || true
+                            
+                            # Installer sudo si absent
+                            if ! command -v sudo &> /dev/null; then
+                                echo "Installing sudo..."
+                                apt-get install -y sudo || apt-get install -y --no-install-recommends sudo
+                            fi
+                            
+                            # Installer curl si absent
+                            if ! command -v curl &> /dev/null; then
+                                echo "Installing curl..."
+                                apt-get install -y curl || apt-get install -y --no-install-recommends curl
+                            fi
+                            
+                            # Installer d'autres outils nécessaires
+                            apt-get install -y git || true
+                        fi
+                        
+                        # Pour Alpine Linux
+                        if [ -f /etc/alpine-release ]; then
+                            apk add --no-cache sudo curl git
+                        fi
+                        
+                        echo "Prerequisites installed"
+                    '''
+                }
+            }
+        }
+
+        stage('Setup Environment') {
     steps {
         script {
             sh '''
-                echo " Setting up environment..."
+                echo "Setting up environment..."
+                echo "Installing kubectl..."
                 
-                # Installer kubectl s'il n'est pas présent
+                # Vérifier si kubectl existe déjà
                 if ! command -v kubectl &> /dev/null; then
-                    echo "Installing kubectl..."
-                    curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+                    # Télécharger kubectl dans le workspace
+                    KUBECTL_VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt)
+                    curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+                    
+                    # Installer sans sudo (dans ~/.local/bin ou ajouter au PATH)
                     chmod +x kubectl
-                    sudo mv kubectl /usr/local/bin/
+                    mkdir -p $HOME/.local/bin
+                    mv kubectl $HOME/.local/bin/
+                    echo 'export PATH=$HOME/.local/bin:$PATH' >> $HOME/.bashrc
+                    export PATH=$HOME/.local/bin:$PATH
+                    
+                    echo "kubectl installed successfully"
                 else
                     echo "kubectl already installed"
                 fi
                 
-                # Installer Minikube s'il n'est pas présent
-                if ! command -v minikube &> /dev/null; then
-                    echo "Installing Minikube..."
-                    curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-                    sudo install minikube-linux-amd64 /usr/local/bin/minikube
-                    chmod +x /usr/local/bin/minikube
-                else
-                    echo "Minikube already installed"
-                fi
-                
-                # Vérifier les installations
-                echo "=== Versions installed ==="
-                kubectl version --client --short 2>/dev/null || echo "kubectl check failed"
-                minikube version 2>/dev/null || echo "minikube check failed"
+                # Vérifier l'installation
+                kubectl version --client --short
             '''
         }
     }
