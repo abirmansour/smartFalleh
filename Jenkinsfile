@@ -884,9 +884,8 @@ RUN rm -f /etc/nginx/conf.d/default.conf
 # Copy built assets
 COPY --from=builder --chown=nginxuser:nginxuser /app/dist /usr/share/nginx/html
 
-# Copy custom nginx config if exists
-COPY nginx/nginx.conf /etc/nginx/conf.d/default.conf 2>/dev/null || \
-    echo "events {} http { server { listen 80; root /usr/share/nginx/html; location / { try_files \$uri \$uri/ /index.html; } } }" > /etc/nginx/nginx.conf
+# Provide basic Nginx config
+RUN echo 'events {} http { server { listen 80; root /usr/share/nginx/html; location / { try_files $uri $uri/ /index.html; } } }' > /etc/nginx/conf.d/default.conf
 
 # Set permissions
 RUN chmod -R 755 /usr/share/nginx/html
