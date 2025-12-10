@@ -674,26 +674,34 @@ ENDOFFILE
         
       
         
-        stage('Build Docker Images for Minikube') {
+       stage('Build Docker Images for Minikube') {
     environment {
-        // Set npm config globally
+        // Network optimization for Docker
+        DOCKER_BUILDKIT = '1'
+        BUILDKIT_PROGRESS = 'plain'
+        COMPOSE_HTTP_TIMEOUT = '300'
+        
+        // NPM optimization
         NPM_CONFIG_REGISTRY = 'https://registry.npmjs.org/'
-        NPM_CONFIG_FETCH_RETRY_MINTIMEOUT = '10000'
+        NPM_CONFIG_FETCH_RETRY_MINTIMEOUT = '30000'
         NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT = '300000'
+        NPM_CONFIG_FETCH_RETRIES = '5'
+        NPM_CONFIG_MAXSOCKETS = '1'
+        NPM_CONFIG_PREFER_OFFLINE = 'true'
         NPM_CONFIG_STRICT_SSL = 'false'
     }
     
     steps {
         script {
-            echo "Building Docker images for Minikube..."
-            
-            // Backend 
+            // Build with Docker BuildKit
             sh '''
-                echo "Building backend image..."
-                cd backend
+                # Clean Docker cache first
+                docker builder prune -f
                 
-                # Simple retry
-                if ! docker build \
+                # Build backend
+                cd backend
+                docker build \
+                    --no-cache \
                     --build-arg NODE_ENV=production \
                     --build-arg PORT=3000 \
                     --build-arg DB_HOST=mysql-service \
@@ -709,43 +717,16 @@ ENDOFFILE
                     --build-arg SMTP_USER="$EMAIL_USER" \
                     --build-arg SMTP_FROM="SmartFalleh <$EMAIL_USER>" \
                     -t doffy01/smartfalleh:backend-$BUILD_NUMBER \
-                    -f Dockerfile .; then
-                    
-                    echo "First attempt failed, retrying once..."
-                    sleep 10
-                    docker build \
-                        --build-arg NODE_ENV=production \
-                        --build-arg PORT=3000 \
-                        --build-arg DB_HOST=mysql-service \
-                        --build-arg DB_PORT=3306 \
-                        --build-arg DB_USERNAME="$DB_USERNAME" \
-                        --build-arg DB_DATABASE="$DB_DATABASE" \
-                        --build-arg JWT_SECRET="$JWT_SECRET" \
-                        --build-arg JWT_EXPIRES_IN=1h \
-                        --build-arg EMAIL_USER="$EMAIL_USER" \
-                        --build-arg SMTP_PASS="$SMTP_PASS" \
-                        --build-arg SMTP_HOST="$SMTP_HOST" \
-                        --build-arg SMTP_PORT="$SMTP_PORT" \
-                        --build-arg SMTP_USER="$EMAIL_USER" \
-                        --build-arg SMTP_FROM="SmartFalleh <$EMAIL_USER>" \
-                        -t doffy01/smartfalleh:backend-$BUILD_NUMBER \
-                        -f Dockerfile .
-                fi
+                    -f Dockerfile .
                 cd ..
             '''
             
-            // Frontend
+            // Build frontend
             sh '''
-                echo "Building frontend image..."
                 docker build \
                     --build-arg REACT_APP_API_URL=http://smartfalleh.local/api \
                     -t doffy01/smartfalleh:frontend-$BUILD_NUMBER \
                     -f frontend/Dockerfile ./frontend
-            '''
-            
-            sh '''
-                echo "✅ Docker images:"
-                docker images | grep smartfalleh
             '''
         }
     }
