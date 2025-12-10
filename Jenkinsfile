@@ -213,34 +213,31 @@ pipeline {
 } */
 
 stage('Install Dependencies') {
-    steps {
-        parallel {
-            stage('Backend Dependencies') {
-                steps {
-                    dir('backend') {
-                        sh '''
-                            npm ci --no-audit
-                            npm install --save-dev jest-junit@16.0.0 || echo "jest-junit already installed"
-                            npm install --save-dev @eslint/js eslint @typescript-eslint/eslint-plugin @typescript-eslint/parser || echo "ESLint installation completed"
-                        '''
-                    }
+    parallel {  
+        stage('Backend Dependencies') {
+            steps {
+                dir('backend') {
+                    sh '''
+                        npm ci --no-audit
+                        npm install --save-dev jest-junit@16.0.0 || echo "jest-junit already installed"
+                        npm install --save-dev @eslint/js eslint @typescript-eslint/eslint-plugin @typescript-eslint/parser || echo "ESLint installation completed"
+                    '''
                 }
             }
-            stage('Frontend Dependencies') {
-                steps {
-                    dir('frontend') {
-                        sh '''
-                            npm ci --no-audit
-                            npm install --save-dev jest-junit@16.0.0 || echo "jest-junit already installed"
-                            npm install --save-dev @eslint/js eslint eslint-plugin-react eslint-plugin-react-hooks || echo "ESLint installation completed"
-                        '''
-                    }
+        }
+        stage('Frontend Dependencies') {
+            steps {
+                dir('frontend') {
+                    sh '''
+                        npm ci --no-audit
+                        npm install --save-dev jest-junit@16.0.0 || echo "jest-junit already installed"
+                        npm install --save-dev @eslint/js eslint eslint-plugin-react eslint-plugin-react-hooks || echo "ESLint installation completed"
+                    '''
                 }
             }
         }
     }
 }
-
         
         stage('Lint and Code Quality') {
             parallel {
