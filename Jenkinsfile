@@ -672,7 +672,7 @@ ENDOFFILE
             }
         }
         
-      stage('Build Docker Images for Minikube') {
+     stage('Build Docker Images for Minikube') {
     environment {
         DOCKER_BUILDKIT = '1'
         BUILDKIT_PROGRESS = 'plain'
@@ -770,15 +770,20 @@ ENDOFFILE
                 # 3. Update Dockerfile to use the correct schema path
                 echo "=== Updating Dockerfile ==="
                 
-                # Backup original
-                cp backend/Dockerfile backend/Dockerfile.backup
+                # Check current Dockerfile content
+                echo "=== Current Dockerfile (relevant lines) ==="
+                grep -A2 -B2 "COPY.*prisma" backend/Dockerfile || true
                 
-                # Fix the prisma schema copy line
-                sed -i 's|COPY \\.\\./k8s/07-prisma-configmap\\.yaml \\./prisma/schema\\.prisma|COPY prisma/schema.prisma ./prisma/schema.prisma|' backend/Dockerfile
-                
-                # Verify the fix
-                echo "=== Updated Dockerfile line ==="
-                grep "COPY.*prisma" backend/Dockerfile
+                # Fix the prisma schema copy line if needed
+                if grep -q "COPY.*07-prisma-configmap.yaml" backend/Dockerfile; then
+                    echo "Fixing Dockerfile COPY line..."
+                    sed -i 's|COPY.*07-prisma-configmap.yaml.*|COPY prisma/schema.prisma ./prisma/schema.prisma|' backend/Dockerfile
+                    
+                    echo "=== Updated Dockerfile line ==="
+                    grep "COPY.*prisma" backend/Dockerfile
+                else
+                    echo "Dockerfile already has correct COPY line"
+                fi
             '''
             
             // Build backend
@@ -786,7 +791,21 @@ ENDOFFILE
                 echo "=== Building Backend Image ==="
                 cd backend
                 
-                # Build with proper environment variables
+                # Verify the schema.prisma exists
+                echo "=== Verifying files ==="
+                ls -la prisma/ || echo "prisma directory not found"
+                [ -f prisma/schema.prisma ] && echo "schema.prisma exists" || echo "schema.prisma NOT found"
+                
+                # Verify Dockerfile
+                echo "=== Dockerfile content (relevant part) ==="
+                grep -n "COPY\|prisma" Dockerfile
+                
+                # Test Docker build with debug
+                echo "=== Testing Docker build context ==="
+                docker build --no-cache --progress=plain -t test-build -f Dockerfile . 2>&1 | tail -100 || echo "Build test failed"
+                
+                # Actual build
+                echo "=== Starting actual build ==="
                 docker build \
                     --no-cache \
                     --build-arg NODE_ENV=production \
@@ -816,7 +835,7 @@ ENDOFFILE
                 cd ..
             '''
             
-            // Build frontend (keeping the existing frontend build logic)
+            // Build frontend
             sh '''
                 echo "=== Building Frontend Image ==="
                 
@@ -871,8 +890,6 @@ DOCKERFILE
         }
     }
 }
-
-
 stage('Deploy to Kubernetes') {
     steps {
         script {
