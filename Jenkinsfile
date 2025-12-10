@@ -164,7 +164,7 @@ pipeline {
                         npm ci --no-audit
                         # Installer ESLint si nécessaire
                         if ! npm list eslint 2>/dev/null | grep -q eslint; then
-                            npm install --save-dev eslint jest-junit@16.0.0
+                            npm install --save-dev eslint jest-junit@16.0.0 && npm install -g eslint
                         else
                             npm install --save-dev jest-junit@16.0.0 || echo "jest-junit already installed"
                         fi
@@ -179,7 +179,7 @@ pipeline {
                         npm ci --no-audit
                         # Installer ESLint si nécessaire
                         if ! npm list eslint 2>/dev/null | grep -q eslint; then
-                            npm install --save-dev eslint jest-junit@16.0.0
+                            npm install --save-dev eslint jest-junit@16.0.0 && npm install -g eslint
                         else
                             npm install --save-dev jest-junit@16.0.0 || echo "jest-junit already installed"
                         fi
@@ -191,23 +191,27 @@ pipeline {
 }
         
         stage('Lint and Code Quality') {
-            parallel {
-                stage('Backend Lint') {
-                    steps {
-                        dir('backend') {
-                            sh 'npm run lint:ci || echo "Backend linting completed with warnings - continuing build"'
-                        }
-                    }
-                }
-                stage('Frontend Lint') {
-                    steps {
-                        dir('frontend') {
-                            sh 'npm run lint || echo "Frontend linting completed with issues - continuing build"'
-                        }
-                    }
+    parallel {
+        stage('Backend Lint') {
+            steps {
+                dir('backend') {
+                    sh '''
+                        npx eslint "{src,apps,libs,test}/**/*.ts" --fix --quiet || echo "Backend linting completed with warnings - continuing build"
+                    '''
                 }
             }
         }
+        stage('Frontend Lint') {
+            steps {
+                dir('frontend') {
+                    sh '''
+                        npx eslint . --ext .js,.jsx --fix || echo "Frontend linting completed with issues - continuing build"
+                    '''
+                }
+            }
+        }
+    }
+}
         
         stage('Run Tests') {
             parallel {
@@ -293,38 +297,31 @@ ENDOFFILE
         
 
        stage('Setup Minikube Environment') {
-        steps {
-          script {
+    steps {
+        script {
             sh '''
-                
-                # 1. Set up directories
+                # 1. Set up local bin directory for minikube only
                 LOCAL_BIN="$HOME/.local/bin"
                 mkdir -p $LOCAL_BIN
                 export PATH=$LOCAL_BIN:$PATH
                 
-                # 2. Install kubectl if needed
-                if ! command -v kubectl &> /dev/null; then
-                    echo "Installing kubectl..."
-                    KUBECTL_VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt)
-                    curl -LO "https://dl.k8s.io/release/$KUBECTL_VERSION/bin/linux/amd64/kubectl"
-                    chmod +x kubectl
-                    mv kubectl $LOCAL_BIN/
-                fi
-                
-                # 3. Install Minikube if needed
+                # 2. Install Minikube if needed (kubectl already installed in Setup Environment stage)
                 if ! command -v minikube &> /dev/null; then
                     echo "Installing Minikube..."
                     curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
                     chmod +x minikube-linux-amd64
                     mv minikube-linux-amd64 $LOCAL_BIN/minikube
+                else
+                    echo "minikube already installed"
                 fi
                 
-                # 4. Verify installations
+                # 3. Verify kubectl is accessible (installed earlier)
                 echo "=== Tool Versions ==="
-                kubectl version --client 2>/dev/null || echo "kubectl check failed"
+                echo "kubectl: $(which kubectl)"
+                kubectl version --client
                 minikube version 2>/dev/null || echo "minikube check failed"
                 
-                # 5. Start Minikube cluster
+                # 4. Start Minikube cluster
                 echo "=== Starting Minikube ==="
                 minikube start \
                     --driver=docker \
@@ -336,22 +333,21 @@ ENDOFFILE
                     --wait-timeout=5m \
                     --interactive=false
                 
-                # 6. Configure environment
+                # 5. Configure environment
                 minikube update-context
                 
-                # 7. Verify cluster
+                # 6. Verify cluster
                 echo "=== Cluster Status ==="
                 minikube status
                 echo "Cluster IP: $(minikube ip)"
                 
-                # 8. Make kubectl use Minikube context
+                # 7. Make kubectl use Minikube context
                 kubectl config use-context minikube
                 kubectl cluster-info
                 
-                # 9. Export variables for later stages
+                # 8. Export variables for later stages
                 echo "export MINIKUBE_IP=$(minikube ip)" >> $BASH_ENV
                 echo "export KUBECONFIG=$HOME/.kube/config" >> $BASH_ENV
-                echo "export PATH=$LOCAL_BIN:$PATH" >> $BASH_ENV
                 
                 echo "✅ Minikube environment setup complete!"
             '''
