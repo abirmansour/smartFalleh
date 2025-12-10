@@ -210,7 +210,7 @@ pipeline {
             }
         }
     }
-}
+} 
 
 stage('Install ESLint Dependencies') {
     steps {
@@ -414,7 +414,7 @@ ENDOFFILE
                     // Créer le dossier k8s s'il n'existe pas
                     sh '''
                         mkdir -p k8s
-                        echo "📁 Création des fichiers Kubernetes..."
+                        echo "Création des fichiers Kubernetes..."
                     '''
                     
                     // Fichier namespace
