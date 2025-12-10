@@ -89,33 +89,25 @@ pipeline {
     steps {
         script {
             sh '''
-                echo "=== Setting up environment ==="
+                echo "Setting up environment"
                 
-                # 1. Vérifier curl une fois pour toutes
-                if ! command -v curl &> /dev/null; then
-                    echo "ERROR: curl not found. Please install curl on Jenkins agent."
-                    exit 1
-                fi
-                echo "✓ curl is available"
+                # 1. Utiliser curl DIRECTEMENT
+                echo "Downloading kubectl..."
                 
-                # 2. Installer kubectl localement
-                echo "Installing kubectl..."
-                mkdir -p $WORKSPACE/.local/bin
-                
-                # Téléchargement simple
+                # Essayer le téléchargement - s'il échoue, on verra l'erreur
                 curl -LO https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl
                 
-                if [ ! -f "kubectl" ]; then
-                    echo "ERROR: Download failed"
-                    exit 1
-                fi
+                # 2. Si on arrive ici, curl a fonctionné
+                echo "Creating local bin directory..."
+                mkdir -p $WORKSPACE/.local/bin
                 
-                # Installation
+                # 3. Installer kubectl
                 chmod +x kubectl
                 mv kubectl $WORKSPACE/.local/bin/
                 
-                # Vérification
-                $WORKSPACE/.local/bin/kubectl version --client --short 2>/dev/null || echo "kubectl installed"
+                # 4. Vérifier
+                $WORKSPACE/.local/bin/kubectl version --client --short 2>/dev/null || \
+                    echo "kubectl installed (version check skipped)"
                 
                 echo "✓ Environment setup complete"
             '''
