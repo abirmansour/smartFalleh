@@ -85,36 +85,68 @@ pipeline {
             }
         }
 
-       stage('Setup Environment') {
+      stage('Setup Environment') {
     steps {
         script {
             sh '''
                 echo "Setting up environment"
+                echo "Downloading kubectl using reliable method..."
                 
-                # 1. Utiliser curl DIRECTEMENT
-                echo "Downloading kubectl..."
+                # Define paths
+                KUBECTL_VERSION="v1.28.0"
+                LOCAL_BIN_DIR="$WORKSPACE/.local/bin"
+                mkdir -p $LOCAL_BIN_DIR
                 
-                # Essayer le téléchargement - s'il échoue, on verra l'erreur
-                curl -LO https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl
+                # Use a faster, more reliable Google Cloud Storage URL (a recommended mirror)
+                KUBECTL_URL="https://storage.googleapis.com/kubernetes-release/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+                SHA_URL="${KUBECTL_URL}.sha256"
                 
-                # 2. Si on arrive ici, curl a fonctionné
-                echo "Creating local bin directory..."
-                mkdir -p $WORKSPACE/.local/bin
+                # Download with retries and connection stability options
+                echo "Downloading kubectl binary..."
+                curl -fL --retry 3 --retry-delay 2 --connect-timeout 30 -o kubectl "${KUBECTL_URL}"
                 
-                # 3. Installer kubectl
+                if [ $? -eq 0 ]; then
+                    echo "✓ Binary downloaded successfully"
+                else
+                    echo "❌ Download failed, trying fallback URL..."
+                    # Try alternative URL (dl.k8s.io is often a redirector)
+                    curl -fL --retry 3 -o kubectl "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl" || {
+                        echo "❌ All download attempts failed"
+                        exit 1
+                    }
+                fi
+                
+                # Verify download integrity (CRITICAL STEP)
+                echo "Downloading checksum for verification..."
+                curl -fL --retry 2 -o kubectl.sha256 "${SHA_URL}" || curl -fL --retry 2 -o kubectl.sha256 "${KUBECTL_URL}.sha256"
+                
+                if [ -f kubectl.sha256 ]; then
+                    echo "Verifying kubectl checksum..."
+                    echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check --status
+                    if [ $? -eq 0 ]; then
+                        echo "✓ Checksum verified successfully"
+                    else
+                        echo "❌ Checksum verification FAILED! Download is corrupt."
+                        exit 1
+                    fi
+                else
+                    echo "⚠️ Could not download checksum file, skipping verification (not recommended)"
+                fi
+                
+                # Install kubectl
+                echo "Installing kubectl to workspace..."
                 chmod +x kubectl
-                mv kubectl $WORKSPACE/.local/bin/
+                mv kubectl $LOCAL_BIN_DIR/
+                export PATH="$LOCAL_BIN_DIR:$PATH"
                 
-                # 4. Vérifier
-                $WORKSPACE/.local/bin/kubectl version --client 2>/dev/null || \
-                    echo "kubectl installed (version check skipped)"
+                # Verify installation
+                $LOCAL_BIN_DIR/kubectl version --client --short || echo "⚠️ Version check failed, but binary exists"
                 
                 echo "✓ Environment setup complete"
             '''
         }
     }
 }
-
         stage('Verify Setup') {
     steps {
         script {
