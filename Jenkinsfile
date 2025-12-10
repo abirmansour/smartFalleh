@@ -186,7 +186,7 @@ pipeline {
         }
     }
 }
-        
+        /*
         stage('Install Dependencies') {
     parallel {
         stage('Backend Dependencies') {
@@ -210,24 +210,28 @@ pipeline {
             }
         }
     }
-} 
+} */
 
-stage('Install ESLint Dependencies') {
+stage('Install Dependencies') {
     steps {
         parallel {
-            stage('Backend ESLint') {
+            stage('Backend Dependencies') {
                 steps {
                     dir('backend') {
                         sh '''
+                            npm ci --no-audit
+                            npm install --save-dev jest-junit@16.0.0 || echo "jest-junit already installed"
                             npm install --save-dev @eslint/js eslint @typescript-eslint/eslint-plugin @typescript-eslint/parser || echo "ESLint installation completed"
                         '''
                     }
                 }
             }
-            stage('Frontend ESLint') {
+            stage('Frontend Dependencies') {
                 steps {
                     dir('frontend') {
                         sh '''
+                            npm ci --no-audit
+                            npm install --save-dev jest-junit@16.0.0 || echo "jest-junit already installed"
                             npm install --save-dev @eslint/js eslint eslint-plugin-react eslint-plugin-react-hooks || echo "ESLint installation completed"
                         '''
                     }
@@ -236,6 +240,7 @@ stage('Install ESLint Dependencies') {
         }
     }
 }
+
         
         stage('Lint and Code Quality') {
             parallel {
