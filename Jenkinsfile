@@ -798,7 +798,7 @@ ENDOFFILE
                 
                 # Verify Dockerfile
                 echo "=== Dockerfile content (relevant part) ==="
-                grep -n "COPY\|prisma" Dockerfile
+                grep -n "COPY.*prisma" Dockerfile
                 
                 # Test Docker build with debug
                 echo "=== Testing Docker build context ==="
