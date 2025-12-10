@@ -10,7 +10,7 @@ pipeline {
         timeout(time: 90, unit: 'MINUTES') 
         buildDiscarder(logRotator(numToKeepStr: '10'))
         disableConcurrentBuilds()
-        retry(3)
+        retry(2)
     }
     
     environment {
@@ -27,7 +27,7 @@ pipeline {
         
         // KUBERNETES CONFIGURATION
         K8S_NAMESPACE = 'smartfalleh'
-        MINIKUBE_IP = sh(script: 'minikube ip 2>/dev/null || echo "127.0.0.1"', returnStdout: true).trim()
+        MINIKUBE_IP = ''
         
         // APPLICATION URLs
         REACT_APP_API_URL = 'http://smartfalleh.local/api'
@@ -140,7 +140,7 @@ pipeline {
                 export PATH="$LOCAL_BIN_DIR:$PATH"
                 
                 # Verify installation
-                $LOCAL_BIN_DIR/kubectl version --client --short || echo "⚠️ Version check failed, but binary exists"
+                $LOCAL_BIN_DIR/kubectl version --client || echo "⚠️ Version check failed, but binary exists"
                 
                 echo "✓ Environment setup complete"
             '''
@@ -206,6 +206,31 @@ pipeline {
                         npm ci --no-audit
                         npm install --save-dev jest-junit@16.0.0 || echo "jest-junit already installed"
                     '''
+                }
+            }
+        }
+    }
+}
+
+stage('Install ESLint Dependencies') {
+    steps {
+        parallel {
+            stage('Backend ESLint') {
+                steps {
+                    dir('backend') {
+                        sh '''
+                            npm install --save-dev @eslint/js eslint @typescript-eslint/eslint-plugin @typescript-eslint/parser || echo "ESLint installation completed"
+                        '''
+                    }
+                }
+            }
+            stage('Frontend ESLint') {
+                steps {
+                    dir('frontend') {
+                        sh '''
+                            npm install --save-dev @eslint/js eslint eslint-plugin-react eslint-plugin-react-hooks || echo "ESLint installation completed"
+                        '''
+                    }
                 }
             }
         }
@@ -317,13 +342,14 @@ ENDOFFILE
        stage('Setup Minikube Environment') {
     steps {
         script {
+            try {
             sh '''
                 # 1. Set up local bin directory for minikube only
                 LOCAL_BIN="$HOME/.local/bin"
                 mkdir -p $LOCAL_BIN
                 export PATH=$LOCAL_BIN:$PATH
                 
-                # 2. Install Minikube if needed (kubectl already installed in Setup Environment stage)
+                # 2. Install Minikube if needed
                 if ! command -v minikube &> /dev/null; then
                     echo "Installing Minikube..."
                     curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
@@ -333,42 +359,51 @@ ENDOFFILE
                     echo "minikube already installed"
                 fi
                 
-                # 3. Verify kubectl is accessible (installed earlier)
-                echo "=== Tool Versions ==="
-                echo "kubectl: $(which kubectl)"
-                kubectl version --client
-                minikube version 2>/dev/null || echo "minikube check failed"
+                # 3. Fix: Store minikube IP properly
+                MINIKUBE_IP=$(minikube ip 2>/dev/null || echo "127.0.0.1")
+                echo "Minikube IP: $MINIKUBE_IP"
                 
-                # 4. Start Minikube cluster
-                echo "=== Starting Minikube ==="
-                minikube start \
-                    --driver=docker \
-                    --memory=4096 \
-                    --cpus=2 \
-                    --force \
-                    --delete-on-failure \
-                    --wait=all \
-                    --wait-timeout=5m \
-                    --interactive=false
+                # 4. Start Minikube cluster if not running
+                if ! minikube status | grep -q "Running"; then
+                    echo "=== Starting Minikube ==="
+                    minikube start \\
+                        --driver=docker \\
+                        --memory=4096 \\
+                        --cpus=2 \\
+                        --force \\
+                        --delete-on-failure \\
+                        --wait=all \\
+                        --wait-timeout=5m \\
+                        --interactive=false
+                else
+                    echo "Minikube is already running"
+                fi
                 
                 # 5. Configure environment
-                minikube update-context
+                minikube update-context 2>/dev/null || true
                 
                 # 6. Verify cluster
                 echo "=== Cluster Status ==="
                 minikube status
-                echo "Cluster IP: $(minikube ip)"
                 
                 # 7. Make kubectl use Minikube context
-                kubectl config use-context minikube
-                kubectl cluster-info
+                kubectl config use-context minikube 2>/dev/null || true
+                kubectl cluster-info 2>/dev/null || echo "Cluster info not available yet"
                 
-                # 8. Export variables for later stages
-                echo "export MINIKUBE_IP=$(minikube ip)" >> $BASH_ENV
+                # 8. Store environment variables
+                MINIKUBE_IP=$(minikube ip 2>/dev/null || echo "127.0.0.1")
+                echo "export MINIKUBE_IP=$MINIKUBE_IP" >> $BASH_ENV
                 echo "export KUBECONFIG=$HOME/.kube/config" >> $BASH_ENV
                 
                 echo "✅ Minikube environment setup complete!"
             '''
+            } catch (Exception e) {
+                echo "⚠️ Minikube setup failed: ${e.getMessage()}"
+                echo "Continuing with local development setup..."
+                sh '''
+                    echo "export MINIKUBE_IP=127.0.0.1" >> $BASH_ENV
+                '''
+            }
         }
     }
 }
