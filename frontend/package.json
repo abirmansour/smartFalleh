@@ -8,7 +8,8 @@
     "build": "vite build",
     "test": "jest",
     "test:ci": "",
-    "lint": "eslint . --ext .js,.jsx --fix",
+    "lint": "eslint src/**/*.{js,jsx} --config eslint.config.js --fix",
+    "lint:ci": "eslint src/**/*.{js,jsx} --config eslint.config.js --max-warnings=50",
     "preview": "vite preview"
   },
   "dependencies": {

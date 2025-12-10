@@ -186,8 +186,8 @@ pipeline {
         }
     }
 }
-        /*
-        stage('Install Dependencies') {
+
+stage('Install Dependencies') {
     parallel {
         stage('Backend Dependencies') {
             steps {
@@ -210,53 +210,26 @@ pipeline {
             }
         }
     }
-} */
-
-stage('Install Dependencies') {
-    parallel {  
-        stage('Backend Dependencies') {
+}
+        
+        stage('Lint and Code Quality') {
+         parallel {
+           stage('Backend Lint') {
             steps {
                 dir('backend') {
-                    sh '''
-                        npm ci --no-audit
-                        npm install --save-dev jest-junit@16.0.0 || echo "jest-junit already installed"
-                        npm install --save-dev @eslint/js eslint @typescript-eslint/eslint-plugin @typescript-eslint/parser || echo "ESLint installation completed"
-                    '''
+                    sh 'npm run lint:ci || echo "Backend linting completed with warnings - continuing build"'
                 }
             }
         }
-        stage('Frontend Dependencies') {
+        stage('Frontend Lint') {
             steps {
                 dir('frontend') {
-                    sh '''
-                        npm ci --no-audit
-                        npm install --save-dev jest-junit@16.0.0 || echo "jest-junit already installed"
-                        npm install --save-dev @eslint/js eslint eslint-plugin-react eslint-plugin-react-hooks || echo "ESLint installation completed"
-                    '''
+                    sh 'npm run lint || echo "Frontend linting completed with issues - continuing build"'
                 }
             }
         }
     }
 }
-        
-        stage('Lint and Code Quality') {
-            parallel {
-                stage('Backend Lint') {
-                    steps {
-                        dir('backend') {
-                            sh 'npm run lint:ci || echo "Backend linting completed with warnings - continuing build"'
-                        }
-                    }
-                }
-                stage('Frontend Lint') {
-                    steps {
-                        dir('frontend') {
-                            sh 'npm run lint || echo "Frontend linting completed with issues - continuing build"'
-                        }
-                    }
-                }
-            }
-        }
         
         stage('Run Tests') {
             parallel {
@@ -345,71 +318,76 @@ ENDOFFILE
     steps {
         script {
             try {
-            sh '''
-                # 1. Set up local bin directory for minikube only
-                LOCAL_BIN="$HOME/.local/bin"
-                mkdir -p $LOCAL_BIN
-                export PATH=$LOCAL_BIN:$PATH
+                // Run the setup and capture output
+                def minikubeOutput = sh(script: '''
+                    # 1. Create all necessary directories
+                    LOCAL_BIN="$HOME/.local/bin"
+                    KUBE_DIR="$HOME/.kube"
+                    mkdir -p $LOCAL_BIN
+                    mkdir -p $KUBE_DIR
+                    export PATH=$LOCAL_BIN:$PATH
+                    
+                    # 2. Install Minikube if needed
+                    if ! command -v minikube &> /dev/null; then
+                        echo "Installing Minikube..."
+                        curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+                        chmod +x minikube-linux-amd64
+                        mv minikube-linux-amd64 $LOCAL_BIN/minikube
+                    else
+                        echo "minikube already installed"
+                    fi
+                    
+                    # 3. Start Minikube if not running
+                    if ! minikube status | grep -q "Running"; then
+                        echo "=== Starting Minikube ==="
+                        minikube start \\
+                            --driver=docker \\
+                            --memory=4096 \\
+                            --cpus=2 \\
+                            --force \\
+                            --delete-on-failure \\
+                            --wait=all \\
+                            --wait-timeout=5m \\
+                            --interactive=false
+                    fi
+                    
+                    # 4. Get Minikube IP
+                    MINIKUBE_IP=$(minikube ip 2>/dev/null || echo "127.0.0.1")
+                    echo "MINIKUBE_IP=$MINIKUBE_IP"
+                    
+                    # 5. Configure kubectl
+                    minikube update-context 2>/dev/null || true
+                    kubectl config use-context minikube 2>/dev/null || true
+                    
+                    echo "MINIKUBE_IP=$MINIKUBE_IP"
+                ''', returnStdout: true).trim()
                 
-                # 2. Install Minikube if needed
-                if ! command -v minikube &> /dev/null; then
-                    echo "Installing Minikube..."
-                    curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-                    chmod +x minikube-linux-amd64
-                    mv minikube-linux-amd64 $LOCAL_BIN/minikube
-                else
-                    echo "minikube already installed"
-                fi
+                // Extract MINIKUBE_IP from output
+                def minikubeIP = "127.0.0.1"
+                def lines = minikubeOutput.split('\n')
+                for (line in lines) {
+                    if (line.startsWith('MINIKUBE_IP=')) {
+                        minikubeIP = line.replace('MINIKUBE_IP=', '')
+                        break
+                    }
+                }
                 
-                # 3. Fix: Store minikube IP properly
-                MINIKUBE_IP=$(minikube ip 2>/dev/null || echo "127.0.0.1")
-                echo "Minikube IP: $MINIKUBE_IP"
-                
-                # 4. Start Minikube cluster if not running
-                if ! minikube status | grep -q "Running"; then
-                    echo "=== Starting Minikube ==="
-                    minikube start \\
-                        --driver=docker \\
-                        --memory=4096 \\
-                        --cpus=2 \\
-                        --force \\
-                        --delete-on-failure \\
-                        --wait=all \\
-                        --wait-timeout=5m \\
-                        --interactive=false
-                else
-                    echo "Minikube is already running"
-                fi
-                
-                # 5. Configure environment
-                minikube update-context 2>/dev/null || true
-                
-                # 6. Verify cluster
-                echo "=== Cluster Status ==="
-                minikube status
-                
-                # 7. Make kubectl use Minikube context
-                kubectl config use-context minikube 2>/dev/null || true
-                kubectl cluster-info 2>/dev/null || echo "Cluster info not available yet"
-                
-                # 8. Store environment variables
-                MINIKUBE_IP=$(minikube ip 2>/dev/null || echo "127.0.0.1")
-                echo "export MINIKUBE_IP=$MINIKUBE_IP" >> $BASH_ENV
-                echo "export KUBECONFIG=$HOME/.kube/config" >> $BASH_ENV
+                // Set environment variable for Jenkins
+                env.MINIKUBE_IP = minikubeIP
+                env.KUBECONFIG = "$HOME/.kube/config"
                 
                 echo "✅ Minikube environment setup complete!"
-            '''
+                echo "Minikube IP: ${env.MINIKUBE_IP}"
+                
             } catch (Exception e) {
                 echo "⚠️ Minikube setup failed: ${e.getMessage()}"
                 echo "Continuing with local development setup..."
-                sh '''
-                    echo "export MINIKUBE_IP=127.0.0.1" >> $BASH_ENV
-                '''
+                env.MINIKUBE_IP = "127.0.0.1"
+                env.KUBECONFIG = "$HOME/.kube/config"
             }
         }
     }
 }
-
         stage('Prepare Kubernetes Files') {
             steps {
                 script {
