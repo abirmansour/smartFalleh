@@ -106,7 +106,7 @@ pipeline {
                 mv kubectl $WORKSPACE/.local/bin/
                 
                 # 4. Vérifier
-                $WORKSPACE/.local/bin/kubectl version --client --short 2>/dev/null || \
+                $WORKSPACE/.local/bin/kubectl version --client 2>/dev/null || \
                     echo "kubectl installed (version check skipped)"
                 
                 echo "✓ Environment setup complete"
@@ -134,7 +134,7 @@ pipeline {
                 # Vérifications optionnelles (avertissement seulement)
                 echo "4. kubectl:"
                 if [ -f "$WORKSPACE/.local/bin/kubectl" ]; then
-                    $WORKSPACE/.local/bin/kubectl version --client --short
+                    $WORKSPACE/.local/bin/kubectl version --client 
                     echo "✓ kubectl installed at: $WORKSPACE/.local/bin/kubectl"
                 else
                     echo "⚠️ kubectl not available - checking alternative locations"
