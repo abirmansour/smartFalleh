@@ -50,7 +50,8 @@ RUN npm ci --only=production --no-audit --no-fund --no-progress || \
 COPY --from=builder /app/dist ./dist
 
 # 10. Copy Prisma files if they exist
-COPY prisma ./prisma/
+RUN mkdir -p prisma
+COPY ../k8s/07-prisma-configmap.yaml ./prisma/schema.prisma
 
 # 11. Create non-root user
 RUN addgroup -g 1001 -S nodejs && \

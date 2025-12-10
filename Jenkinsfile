@@ -672,16 +672,11 @@ ENDOFFILE
             }
         }
         
-      
-        
-       stage('Build Docker Images for Minikube') {
+        stage('Build Docker Images for Minikube') {
     environment {
-        // Network optimization for Docker
         DOCKER_BUILDKIT = '1'
         BUILDKIT_PROGRESS = 'plain'
         COMPOSE_HTTP_TIMEOUT = '300'
-        
-        // NPM optimization
         NPM_CONFIG_REGISTRY = 'https://registry.npmjs.org/'
         NPM_CONFIG_FETCH_RETRY_MINTIMEOUT = '30000'
         NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT = '300000'
@@ -693,12 +688,295 @@ ENDOFFILE
     
     steps {
         script {
-            // Build with Docker BuildKit
             sh '''
-                # Clean Docker cache first
+                echo "=== Preparing for Docker Build ==="
+                
+                # Clean Docker cache
                 docker builder prune -f
                 
-                # Build backend
+                # 1. Create prisma directory
+                echo "=== Creating prisma directory ==="
+                mkdir -p backend/prisma
+                
+                # 2. Create schema.prisma file with the correct schema
+                echo "=== Creating schema.prisma ==="
+                
+                cat > backend/prisma/schema.prisma << 'EOF'
+                generator client {
+                  provider = "prisma-client-js"
+                }
+                
+                datasource db {
+                  provider = "mysql"
+                  url      = env("DATABASE_URL")
+                }
+                
+                model User {
+                  id                String      @id @default(uuid())
+                  nom               String      @db.VarChar(100)
+                  prenom           String?     @db.VarChar(100)
+                  email            String      @unique @db.VarChar(150)
+                  password         String      @db.VarChar(255)
+                  telephone        String?     @db.VarChar(50)
+                  adresse          String?     @db.Text
+                  role             String      @db.Enum('admin', 'agriculteur', 'jury', 'responsable') @default('responsable')
+                  etat             String      @default('inactive') @db.Enum('active', 'inactive')
+                  cooperativeId    String?     @db.VarChar(36)
+                  cooperative      Cooperative? @relation(fields: [cooperativeId], references: [id])
+                  resetPasswordToken String?   @db.VarChar(255)
+                  resetPasswordExpires DateTime?
+                  createdAt        DateTime    @default(now())
+                  updatedAt        DateTime    @updatedAt
+                  deletedAt        DateTime?   @map("deleted_at")
+                }
+                
+                model Cooperative {
+                  id              String      @id @default(uuid())
+                  nom             String      @db.VarChar(255)
+                  gouvernorat     String      @db.VarChar(100)
+                  telephone       String      @db.VarChar(50)
+                  adresse         String      @db.Text
+                  responsables    User[]
+                  responsable     String?     @db.VarChar(255)
+                }
+                
+                model Demande {
+                  id                String    @id @default(uuid())
+                  nom               String    @db.VarChar(100)
+                  prenom           String    @db.VarChar(100)
+                  telephone        String    @db.VarChar(50)
+                  email            String    @db.VarChar(150)
+                  adresse          String    @db.Text
+                  region           String    @db.VarChar(100)
+                  superficieFerme  Float
+                  nombreVaches     Int
+                  role             String    @db.VarChar(50)
+                  numeroDemande    String    @unique @db.VarChar(100)
+                  statut           String    @default('En attente') @db.VarChar(50)
+                  referenceVache   String?   @db.VarChar(100)
+                  validateNombreVaches Int?
+                  notes           String?   @db.Text
+                  eligible        Boolean?
+                  validatedAt     DateTime?
+                  validatedBy     String?   @db.VarChar(100)
+                }
+                EOF
+                
+                echo "✅ Created schema.prisma"
+                echo "=== Schema preview ==="
+                head -n 20 backend/prisma/schema.prisma
+                echo "..."
+                
+                # 3. Update Dockerfile to use the correct schema path
+                echo "=== Updating Dockerfile ==="
+                
+                # Backup original
+                cp backend/Dockerfile backend/Dockerfile.backup
+                
+                # Fix the prisma schema copy line
+                sed -i 's|COPY \\.\\./k8s/07-prisma-configmap\\.yaml \\./prisma/schema\\.prisma|COPY prisma/schema.prisma ./prisma/schema.prisma|' backend/Dockerfile
+                
+                # Verify the fix
+                echo "=== Updated Dockerfile line ==="
+                grep "COPY.*prisma" backend/Dockerfile
+            '''
+            
+            // Build backend
+            sh '''
+                echo "=== Building Backend Image ==="
+                cd backend
+                
+                # Build with proper environment variables
+                docker build \
+                    --no-cache \
+                    --build-arg NODE_ENV=production \
+                    --build-arg PORT=3000 \
+                    --build-arg DB_HOST=mysql-service \
+                    --build-arg DB_PORT=3306 \
+                    --build-arg DB_USERNAME="$DB_USERNAME" \
+                    --build-arg DB_PASSWORD="$DB_PASSWORD" \
+                    --build-arg DB_DATABASE="$DB_DATABASE" \
+                    --build-arg JWT_SECRET="$JWT_SECRET" \
+                    --build-arg JWT_EXPIRES_IN=1h \
+                    --build-arg EMAIL_USER="$EMAIL_USER" \
+                    --build-arg SMTP_PASS="$SMTP_PASS" \
+                    --build-arg SMTP_HOST="$SMTP_HOST" \
+                    --build-arg SMTP_PORT="$SMTP_PORT" \
+                    --build-arg SMTP_USER="$EMAIL_USER" \
+                    --build-arg SMTP_FROM="SmartFalleh <$EMAIL_USER>" \
+                    -t "doffy01/smartfalleh:backend-${BUILD_NUMBER}" \
+                    -f Dockerfile .
+                
+                if [ $? -eq 0 ]; then
+                    echo "✅ Backend build succeeded"
+                else
+                    echo "❌ Backend build failed"
+                    exit 1
+                fi
+                cd ..
+            '''
+            
+            // Build frontend (keeping the existing frontend build logic)
+            sh '''
+                echo "=== Building Frontend Image ==="
+                
+                if [ -d "frontend" ]; then
+                    echo "Frontend directory exists"
+                    
+                    if [ -f "frontend/Dockerfile" ]; then
+                        echo "Using existing frontend/Dockerfile"
+                        docker build \
+                            --build-arg REACT_APP_API_URL=http://smartfalleh.local/api \
+                            -t "doffy01/smartfalleh:frontend-${BUILD_NUMBER}" \
+                            -f frontend/Dockerfile ./frontend
+                    else
+                        echo "Creating simple frontend Dockerfile"
+                        
+                        cat > frontend/Dockerfile << 'DOCKERFILE'
+FROM node:22-alpine as builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM nginx:alpine
+COPY --from=builder /app/build /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+DOCKERFILE
+                        
+                        docker build \
+                            --build-arg REACT_APP_API_URL=http://smartfalleh.local/api \
+                            -t "doffy01/smartfalleh:frontend-${BUILD_NUMBER}" \
+                            -f frontend/Dockerfile ./frontend
+                    fi
+                    
+                    echo "✅ Frontend image built"
+                else
+                    echo "⚠️ No frontend directory, skipping frontend build"
+                fi
+            '''
+            
+            // Verify
+            sh '''
+                echo "=== Build Results ==="
+                echo "Docker images created:"
+                docker images | grep smartfalleh || echo "No smartfalleh images found"
+                
+                echo ""
+                echo "=== Image sizes ==="
+                docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | grep smartfalleh || true
+            '''
+        }
+    }
+}
+    
+    steps {
+        script {
+            sh '''
+                echo "=== Preparing for Docker Build ==="
+                
+                # Clean Docker cache
+                docker builder prune -f
+                
+                # 1. Copy the ConfigMap file to backend directory
+                # so Docker can access it during build
+                echo "=== Copying ConfigMap to backend ==="
+                cp k8s/07-prisma-configmap.yaml backend/prisma-configmap.yaml
+                
+                # 2. Create the actual schema.prisma file from ConfigMap
+                echo "=== Creating schema.prisma from ConfigMap ==="
+                mkdir -p backend/prisma
+                
+                # Extract the schema from the ConfigMap YAML
+                # The ConfigMap has: data.schema.prisma: | (with indented content)
+                # We need to extract everything after that line
+                
+                # Method 1: If ConfigMap has actual schema content
+                if grep -q "schema.prisma: |" backend/prisma-configmap.yaml; then
+                    echo "Extracting schema from ConfigMap..."
+                    # Extract content after 'schema.prisma: |' and remove indentation
+                    awk '/schema.prisma: \\|/{getline; while(/^    /){print substr($0,5); getline}}' backend/prisma-configmap.yaml > backend/prisma/schema.prisma
+                    
+                    # Check if we got content
+                    if [ -s backend/prisma/schema.prisma ]; then
+                        echo "✅ Extracted schema from ConfigMap"
+                        echo "=== First few lines of schema ==="
+                        head -10 backend/prisma/schema.prisma
+                    else
+                        echo "⚠️ ConfigMap seems empty, creating minimal schema"
+                        cat > backend/prisma/schema.prisma << 'EOF'
+                        generator client {
+                          provider = "prisma-client-js"
+                        }
+                        
+                        datasource db {
+                          provider = "mysql"
+                          url      = env("DATABASE_URL")
+                        }
+                        
+                        model User {
+                          id        String   @id @default(cuid())
+                          email     String   @unique
+                          password  String
+                          name      String?
+                          createdAt DateTime @default(now())
+                          updatedAt DateTime @updatedAt
+                        }
+                        EOF
+                    fi
+                else
+                    echo "⚠️ ConfigMap doesn't contain schema.prisma key, creating minimal schema"
+                    cat > backend/prisma/schema.prisma << 'EOF'
+                    generator client {
+                      provider = "prisma-client-js"
+                    }
+                    
+                    datasource db {
+                      provider = "mysql"
+                      url      = env("DATABASE_URL")
+                    }
+                    
+                    model User {
+                      id        String   @id @default(cuid())
+                      email     String   @unique
+                      password  String
+                      name      String?
+                      createdAt DateTime @default(now())
+                      updatedAt DateTime @updatedAt
+                    }
+                    EOF
+                fi
+                
+                # 3. Fix the Dockerfile temporarily
+                echo "=== Creating fixed Dockerfile ==="
+                cp backend/Dockerfile backend/Dockerfile.original
+                
+                # Create a fixed version without the ../ path
+                cat > backend/Dockerfile.fixed << 'DOCKERFILE'
+# Use the original content but fix the COPY line
+# Instead of: COPY ../k8s/07-prisma-configmap.yaml ./prisma/schema.prisma
+# Use: COPY prisma-configmap.yaml ./prisma/schema.prisma
+# Or better: COPY prisma/schema.prisma ./prisma/schema.prisma
+
+# Copy your entire Dockerfile content here, but change line 10:
+DOCKERFILE
+                
+                # Copy original Dockerfile and fix the problematic line
+                sed 's|COPY ../k8s/07-prisma-configmap.yaml ./prisma/schema.prisma|COPY prisma/schema.prisma ./prisma/schema.prisma|' backend/Dockerfile > backend/Dockerfile.fixed
+                
+                # Use the fixed Dockerfile
+                mv backend/Dockerfile.fixed backend/Dockerfile
+                
+                echo "✅ Dockerfile fixed"
+                echo "=== Fixed line in Dockerfile ==="
+                grep "COPY.*prisma" backend/Dockerfile
+            '''
+            
+            // Build backend
+            sh '''
+                echo "=== Building Backend Image ==="
                 cd backend
                 docker build \
                     --no-cache \
@@ -716,17 +994,165 @@ ENDOFFILE
                     --build-arg SMTP_PORT="$SMTP_PORT" \
                     --build-arg SMTP_USER="$EMAIL_USER" \
                     --build-arg SMTP_FROM="SmartFalleh <$EMAIL_USER>" \
-                    -t doffy01/smartfalleh:backend-$BUILD_NUMBER \
+                    -t "doffy01/smartfalleh:backend-${BUILD_NUMBER}" \
                     -f Dockerfile .
+                
+                if [ $? -eq 0 ]; then
+                    echo "✅ Backend image built: doffy01/smartfalleh:backend-${BUILD_NUMBER}"
+                else
+                    echo "❌ Backend build failed!"
+                    exit 1
+                fi
                 cd ..
             '''
             
             // Build frontend
             sh '''
+                echo "=== Building Frontend Image ==="
+                if [ -f "frontend/Dockerfile" ]; then
+                    docker build \
+                        --build-arg REACT_APP_API_URL=http://smartfalleh.local/api \
+                        -t "doffy01/smartfalleh:frontend-${BUILD_NUMBER}" \
+                        -f frontend/Dockerfile ./frontend
+                    echo "✅ Frontend image built"
+                else
+                    echo "⚠️ No frontend Dockerfile, skipping frontend build"
+                fi
+            '''
+            
+            // Verify
+            sh '''
+                echo "=== Build Results ==="
+                docker images | grep smartfalleh
+            '''
+        }
+    }
+}
+    
+    steps {
+        script {
+            sh '''
+                # Clean Docker cache
+                echo "=== Cleaning Docker cache ==="
+                docker builder prune -f
+                
+                # Create prisma directory
+                echo "=== Creating prisma directory ==="
+                mkdir -p backend/prisma
+                
+                # Create a BASIC schema.prisma file
+                # Since your ConfigMap says it's created dynamically,
+                # we need to create a minimal working schema
+                echo "=== Creating minimal schema.prisma ==="
+                cat > backend/prisma/schema.prisma << 'EOF'
+                generator client {
+                  provider = "prisma-client-js"
+                }
+                
+                datasource db {
+                  provider = "mysql"
+                  url      = env("DATABASE_URL")
+                }
+                
+                // Minimal schema to allow build to proceed
+                // You should replace this with your actual database schema
+                model User {
+                  id        String   @id @default(cuid())
+                  email     String   @unique
+                  password  String
+                  name      String?
+                  createdAt DateTime @default(now())
+                  updatedAt DateTime @updatedAt
+                }
+                EOF
+                
+                echo "Created minimal Prisma schema"
+                echo "=== Schema content ==="
+                cat backend/prisma/schema.prisma
+            '''
+            
+            // Build backend Docker image
+            sh '''
+                echo "=== Building Backend Docker Image ==="
+                cd backend
                 docker build \
-                    --build-arg REACT_APP_API_URL=http://smartfalleh.local/api \
-                    -t doffy01/smartfalleh:frontend-$BUILD_NUMBER \
-                    -f frontend/Dockerfile ./frontend
+                    --no-cache \
+                    --build-arg NODE_ENV=production \
+                    --build-arg PORT=3000 \
+                    --build-arg DB_HOST=mysql-service \
+                    --build-arg DB_PORT=3306 \
+                    --build-arg DB_USERNAME="$DB_USERNAME" \
+                    --build-arg DB_DATABASE="$DB_DATABASE" \
+                    --build-arg JWT_SECRET="$JWT_SECRET" \
+                    --build-arg JWT_EXPIRES_IN=1h \
+                    --build-arg EMAIL_USER="$EMAIL_USER" \
+                    --build-arg SMTP_PASS="$SMTP_PASS" \
+                    --build-arg SMTP_HOST="$SMTP_HOST" \
+                    --build-arg SMTP_PORT="$SMTP_PORT" \
+                    --build-arg SMTP_USER="$EMAIL_USER" \
+                    --build-arg SMTP_FROM="SmartFalleh <$EMAIL_USER>" \
+                    -t "doffy01/smartfalleh:backend-${BUILD_NUMBER}" \
+                    -f Dockerfile .
+                
+                # Check if build succeeded
+                if [ $? -eq 0 ]; then
+                    echo "✅ Backend image built successfully: doffy01/smartfalleh:backend-${BUILD_NUMBER}"
+                else
+                    echo "❌ Backend image build failed!"
+                    exit 1
+                fi
+                cd ..
+            '''
+            
+            // Build frontend Docker image
+            sh '''
+                echo "=== Building Frontend Docker Image ==="
+                # Check if frontend Dockerfile exists
+                if [ -f "frontend/Dockerfile" ]; then
+                    docker build \
+                        --build-arg REACT_APP_API_URL=http://smartfalleh.local/api \
+                        -t "doffy01/smartfalleh:frontend-${BUILD_NUMBER}" \
+                        -f frontend/Dockerfile ./frontend
+                    
+                    if [ $? -eq 0 ]; then
+                        echo "✅ Frontend image built successfully: doffy01/smartfalleh:frontend-${BUILD_NUMBER}"
+                    else
+                        echo "❌ Frontend image build failed!"
+                        exit 1
+                    fi
+                else
+                    echo "⚠️ Frontend Dockerfile not found at frontend/Dockerfile"
+                    echo "Creating a simple frontend Dockerfile..."
+                    
+                    cat > frontend/Dockerfile << 'DOCKERFILE'
+FROM node:22-alpine as builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM nginx:alpine
+COPY --from=builder /app/build /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+DOCKERFILE
+                    
+                    docker build \
+                        --build-arg REACT_APP_API_URL=http://smartfalleh.local/api \
+                        -t "doffy01/smartfalleh:frontend-${BUILD_NUMBER}" \
+                        -f frontend/Dockerfile ./frontend
+                fi
+            '''
+            
+            // Verify images were created
+            sh '''
+                echo "=== Verifying Docker Images ==="
+                echo "Backend image:"
+                docker images | grep "smartfalleh.*backend" || echo "No backend image found"
+                echo ""
+                echo "Frontend image:"
+                docker images | grep "smartfalleh.*frontend" || echo "No frontend image found"
             '''
         }
     }
