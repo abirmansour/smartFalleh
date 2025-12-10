@@ -85,77 +85,81 @@ pipeline {
             }
         }
 
-        stage('Setup Environment') {
-            steps {
-                script {
-                    sh '''
-                        echo "Setting up environment..."
+       stage('Setup Environment') {
+    steps {
+        script {
+            sh '''
+                echo "Setting up environment..."
+                
+                # Vérifier si curl est disponible - SANS sortir immédiatement
+                if ! command -v curl &> /dev/null; then
+                    echo "WARNING: curl not found in PATH."
+                    echo "Will attempt to install kubectl with alternative methods..."
+                    
+                    # Essayer wget si disponible
+                    if command -v wget &> /dev/null; then
+                        echo "Using wget instead of curl"
+                        DOWNLOAD_CMD="wget -q -O"
+                    else
+                        echo "ERROR: Neither curl nor wget found!"
+                        exit 1
+                    fi
+                else
+                    echo "curl found: $(which curl)"
+                    DOWNLOAD_CMD="curl -L -o"
+                fi
+                
+                # Installation de kubectl
+                if ! command -v kubectl &> /dev/null; then
+                    echo "Installing kubectl..."
+                    
+                    # Créer répertoire local
+                    LOCAL_BIN="$WORKSPACE/.local/bin"
+                    mkdir -p $LOCAL_BIN
+                    
+                    # Télécharger kubectl
+                    KUBE_VERSION="v1.28.0"  # Version stable
+                    echo "Downloading kubectl version $KUBE_VERSION..."
+                    
+                    if [ "$DOWNLOAD_CMD" = "curl -L -o" ]; then
+                        curl -LO "https://dl.k8s.io/release/${KUBE_VERSION}/bin/linux/amd64/kubectl"
+                    else
+                        wget -q "https://dl.k8s.io/release/${KUBE_VERSION}/bin/linux/amd64/kubectl"
+                    fi
+                    
+                    # Vérifier et installer
+                    if [ -f "kubectl" ]; then
+                        chmod +x kubectl
+                        mv kubectl $LOCAL_BIN/
                         
-                        # Vérifier si curl est disponible
-                        if ! command -v curl &> /dev/null; then
-                            echo "ERROR: curl not found. The Jenkins agent needs curl pre-installed."
-                            echo "Please check your Jenkins agent configuration."
-                            exit 1
-                        fi
+                        # Ajouter au PATH
+                        export PATH=$LOCAL_BIN:$PATH
+                        echo 'export PATH='$LOCAL_BIN':$PATH' >> ~/.bashrc
                         
-                        # Installation de kubectl LOCALEMENT sans sudo
-                        if ! command -v kubectl &> /dev/null; then
-                            echo "Installing kubectl locally..."
-                            
-                            # Créer un répertoire dans le workspace
-                            LOCAL_BIN="$WORKSPACE/.local/bin"
-                            mkdir -p $LOCAL_BIN
-                            
-                            # Télécharger kubectl
-                            echo "Downloading kubectl..."
-                            KUBE_VERSION="v1.28.0"  # Version fixe pour éviter les erreurs
-                            curl -LO "https://dl.k8s.io/release/${KUBE_VERSION}/bin/linux/amd64/kubectl"
-                            
-                            if [ -f "kubectl" ]; then
-                                # Installer localement
-                                chmod +x kubectl
-                                mv kubectl $LOCAL_BIN/
-                                
-                                # Mettre à jour le PATH
-                                export PATH=$LOCAL_BIN:$PATH
-                                echo "export PATH=$LOCAL_BIN:\$PATH" >> ~/.bashrc
-                                
-                                echo "kubectl installed to: $LOCAL_BIN/kubectl"
-                            else
-                                echo "ERROR: Failed to download kubectl"
-                                exit 1
-                            fi
-                        else
-                            echo "kubectl already installed"
-                        fi
-                        
-                        # Vérifier l'installation
-                        echo "Checking kubectl installation..."
-                        if command -v kubectl &> /dev/null; then
-                            kubectl version --client --short || echo "kubectl found but error executing"
-                        else
-                            # Essayer avec le chemin complet
-                            if [ -f "$WORKSPACE/.local/bin/kubectl" ]; then
-                                $WORKSPACE/.local/bin/kubectl version --client --short
-                                echo "Using kubectl from workspace"
-                            else
-                                echo "ERROR: kubectl not found!"
-                                exit 1
-                            fi
-                        fi
-                        
-                        # Vérifier minikube
-                        echo "Checking minikube..."
-                        if command -v minikube &> /dev/null; then
-                            MINIKUBE_IP=$(minikube ip 2>/dev/null || echo "N/A")
-                            echo "minikube IP: $MINIKUBE_IP"
-                        else
-                            echo "minikube not found in PATH"
-                        fi
-                    '''
-                }
-            }
+                        echo "kubectl installed to: $LOCAL_BIN/kubectl"
+                    else
+                        echo "ERROR: Failed to download kubectl"
+                        exit 1
+                    fi
+                else
+                    echo "kubectl already installed: $(which kubectl)"
+                fi
+                
+                # Vérifier l'installation
+                echo "Verifying kubectl installation..."
+                if command -v kubectl &> /dev/null; then
+                    kubectl version --client --short || echo "kubectl found but error executing"
+                elif [ -f "$LOCAL_BIN/kubectl" ]; then
+                    $LOCAL_BIN/kubectl version --client --short
+                    echo "Note: Add $LOCAL_BIN to your PATH permanently"
+                else
+                    echo "ERROR: kubectl installation failed!"
+                    exit 1
+                fi
+            '''
         }
+    }
+}
         
         stage('Verify Setup') {
     steps {
