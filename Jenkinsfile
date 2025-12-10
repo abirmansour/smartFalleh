@@ -84,46 +84,112 @@ pipeline {
                 }
             }
         }
+
+          stage('Setup Environment') {
+    steps {
+        script {
+            sh '''
+                echo " Setting up environment..."
+                
+                # Installer kubectl s'il n'est pas présent
+                if ! command -v kubectl &> /dev/null; then
+                    echo "Installing kubectl..."
+                    curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+                    chmod +x kubectl
+                    sudo mv kubectl /usr/local/bin/
+                else
+                    echo "kubectl already installed"
+                fi
+                
+                # Installer Minikube s'il n'est pas présent
+                if ! command -v minikube &> /dev/null; then
+                    echo "Installing Minikube..."
+                    curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+                    sudo install minikube-linux-amd64 /usr/local/bin/minikube
+                    chmod +x /usr/local/bin/minikube
+                else
+                    echo "Minikube already installed"
+                fi
+                
+                # Vérifier les installations
+                echo "=== Versions installed ==="
+                kubectl version --client --short 2>/dev/null || echo "kubectl check failed"
+                minikube version 2>/dev/null || echo "minikube check failed"
+            '''
+        }
+    }
+}
         
         stage('Verify Setup') {
-            steps {
-                sh '''
-                    echo "=== Node.js Version ==="
-                    node --version
-                    echo "=== npm Version ==="
-                    npm --version
-                    echo "=== Docker Version ==="
-                    docker --version
-                    echo "=== Kubernetes/kubectl Version ==="
-                    kubectl version --client --short 2>/dev/null || echo "kubectl not available"
-                    echo "=== Minikube Status ==="
-                    minikube status 2>/dev/null || echo "Minikube not running"
-                    echo "=== Project Structure ==="
-                    ls -la
-                '''
-            }
-        }
+    steps {
+        sh '''
+            echo "=== Environment Verification ==="
+            
+            # Vérifications obligatoires
+            echo "1. Node.js:"
+            node --version || { echo "❌ Node.js not found"; exit 1; }
+            
+            echo "2. npm:"
+            npm --version || { echo "❌ npm not found"; exit 1; }
+            
+            echo "3. Docker:"
+            docker --version || { echo "❌ Docker not found"; exit 1; }
+            
+            # Vérifications optionnelles (avertissement seulement)
+            echo "4. kubectl:"
+            if command -v kubectl &> /dev/null; then
+                kubectl version --client --short
+            else
+                echo "⚠️ kubectl not available - will be installed"
+            fi
+            
+            echo "5. Minikube:"
+            if command -v minikube &> /dev/null; then
+                minikube status 2>/dev/null || echo "Minikube not running"
+            else
+                echo "⚠️ minikube not available - will be installed"
+            fi
+            
+            echo "6. Project Structure:"
+            ls -la
+        '''
+    }
+}
         
         stage('Install Dependencies') {
-            parallel {
-                stage('Backend Dependencies') {
-                    steps {
-                        dir('backend') {
-                            sh 'npm ci --no-audit'
-                            sh 'npm install --save-dev jest-junit@16.0.0 || echo "jest-junit already installed"'
-                        }
-                    }
-                }
-                stage('Frontend Dependencies') {
-                    steps {
-                        dir('frontend') {
-                            sh 'npm ci --no-audit'
-                            sh 'npm install --save-dev jest-junit@16.0.0 || echo "jest-junit already installed"'
-                        }
-                    }
+    parallel {
+        stage('Backend Dependencies') {
+            steps {
+                dir('backend') {
+                    sh '''
+                        npm ci --no-audit
+                        # Installer ESLint si nécessaire
+                        if ! npm list eslint 2>/dev/null | grep -q eslint; then
+                            npm install --save-dev eslint jest-junit@16.0.0
+                        else
+                            npm install --save-dev jest-junit@16.0.0 || echo "jest-junit already installed"
+                        fi
+                    '''
                 }
             }
         }
+        stage('Frontend Dependencies') {
+            steps {
+                dir('frontend') {
+                    sh '''
+                        npm ci --no-audit
+                        # Installer ESLint si nécessaire
+                        if ! npm list eslint 2>/dev/null | grep -q eslint; then
+                            npm install --save-dev eslint jest-junit@16.0.0
+                        else
+                            npm install --save-dev jest-junit@16.0.0 || echo "jest-junit already installed"
+                        fi
+                    '''
+                }
+            }
+        }
+    }
+}
         
         stage('Lint and Code Quality') {
             parallel {
@@ -224,7 +290,56 @@ ENDOFFILE
                 }
             }
         }
-        
+
+         stage('Setup Minikube') {
+    steps {
+        script {
+            sh '''
+                echo "🔧 Configuration de Minikube..."
+                
+                # Démarrer Minikube s\'il n\'est pas démarré
+                if ! minikube status 2>/dev/null | grep -q "Running"; then
+                    echo "Starting Minikube..."
+                    minikube start --memory=4096 --cpus=2 --driver=docker --force
+                    
+                    # Vérifier que Minikube a démarré
+                    if [ $? -ne 0 ]; then
+                        echo "❌ Minikube failed to start. Trying alternative..."
+                        minikube delete
+                        minikube start --memory=4096 --cpus=2 --driver=docker --force
+                    fi
+                else
+                    echo "Minikube is already running"
+                fi
+                
+                # Activer l\'addon Ingress
+                echo "Enabling ingress addon..."
+                minikube addons enable ingress
+                
+                # Configurer Docker pour utiliser le daemon de Minikube
+                echo "Setting Docker to use Minikube..."
+                eval $(minikube docker-env) 2>/dev/null || echo "⚠️ Failed to set docker env"
+                
+                # Vérifier l\'état
+                echo " Minikube Status:"
+                minikube status
+                echo " Minikube IP:"
+                minikube ip 2>/dev/null || echo "Could not get Minikube IP"
+            '''
+            
+            // Créer le namespace
+            sh "kubectl create namespace ${K8S_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f - || echo 'Namespace already exists'"
+            
+            sh '''
+                # Configurer les permissions Docker (alternative pour conteneur)
+                echo "Configuring Docker permissions..."
+                sudo chmod 666 /var/run/docker.sock 2>/dev/null || true
+                docker ps 2>/dev/null || echo "Docker may need additional setup"
+            '''
+        }
+    }
+}
+
         stage('Prepare Kubernetes Files') {
             steps {
                 script {
@@ -505,33 +620,7 @@ ENDOFFILE
             }
         }
         
-        stage('Setup Minikube') {
-            steps {
-                script {
-                    sh '''
-                        echo " Configuration de Minikube..."
-                        # Démarrer Minikube s'il n'est pas démarré
-                        if ! minikube status | grep -q "Running"; then
-                            echo "Starting Minikube..."
-                            minikube start --memory=4096 --cpus=2 --driver=docker
-                        fi
-                        
-                        # Activer l'addon Ingress
-                        minikube addons enable ingress
-                        
-                        # Vérifier l'état
-                        echo " Minikube Status:"
-                        minikube status
-                        echo " Ingress Status:"
-                        minikube addons list | grep ingress
-                        
-                        # Configurer Docker pour utiliser le daemon de Minikube
-                        eval $(minikube docker-env)
-                        echo "Docker configuré pour utiliser Minikube"
-                    '''
-                }
-            }
-        }
+      
         
         stage('Build Docker Images for Minikube') {
             steps {

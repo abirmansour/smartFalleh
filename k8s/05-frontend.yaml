@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: doffy01/smartfalleh:frontend-${BUILD_NUMBER}  # À remplacer par Jenkins
+        image: doffy01/smartfalleh:frontend-${BUILD_NUMBER}  
         ports:
         - containerPort: 80
         env:
