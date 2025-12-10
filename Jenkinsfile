@@ -290,49 +290,70 @@ ENDOFFILE
             }
         }
 
-        stage('Setup Minikube') {
-    steps {
-        script {
+        
+
+       stage('Setup Minikube Environment') {
+        steps {
+          script {
             sh '''
-                echo " Configuration de Minikube..."
                 
-                # Démarrer Minikube s\'il n\'est pas démarré
-                if ! minikube status 2>/dev/null | grep -q "Running"; then
-                    echo "Starting Minikube..."
-                    minikube start --memory=4096 --cpus=2 --driver=docker --force
-                    
-                    # Vérifier que Minikube a démarré
-                    if [ $? -ne 0 ]; then
-                        echo "❌ Minikube failed to start. Trying alternative..."
-                        minikube delete
-                        minikube start --memory=4096 --cpus=2 --driver=docker --force
-                    fi
-                else
-                    echo "Minikube is already running"
+                # 1. Set up directories
+                LOCAL_BIN="$HOME/.local/bin"
+                mkdir -p $LOCAL_BIN
+                export PATH=$LOCAL_BIN:$PATH
+                
+                # 2. Install kubectl if needed
+                if ! command -v kubectl &> /dev/null; then
+                    echo "Installing kubectl..."
+                    KUBECTL_VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt)
+                    curl -LO "https://dl.k8s.io/release/$KUBECTL_VERSION/bin/linux/amd64/kubectl"
+                    chmod +x kubectl
+                    mv kubectl $LOCAL_BIN/
                 fi
                 
-                # Activer l\'addon Ingress
-                echo "Enabling ingress addon..."
-                minikube addons enable ingress
+                # 3. Install Minikube if needed
+                if ! command -v minikube &> /dev/null; then
+                    echo "Installing Minikube..."
+                    curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+                    chmod +x minikube-linux-amd64
+                    mv minikube-linux-amd64 $LOCAL_BIN/minikube
+                fi
                 
-                # Configurer Docker pour utiliser le daemon de Minikube
-                echo "Setting Docker to use Minikube..."
-                eval $(minikube docker-env) 2>/dev/null || echo "⚠️ Failed to set docker env"
+                # 4. Verify installations
+                echo "=== Tool Versions ==="
+                kubectl version --client 2>/dev/null || echo "kubectl check failed"
+                minikube version 2>/dev/null || echo "minikube check failed"
                 
-                # Vérifier l\'état
-                echo " Minikube Status:"
+                # 5. Start Minikube cluster
+                echo "=== Starting Minikube ==="
+                minikube start \
+                    --driver=docker \
+                    --memory=4096 \
+                    --cpus=2 \
+                    --force \
+                    --delete-on-failure \
+                    --wait=all \
+                    --wait-timeout=5m \
+                    --interactive=false
+                
+                # 6. Configure environment
+                minikube update-context
+                
+                # 7. Verify cluster
+                echo "=== Cluster Status ==="
                 minikube status
-                echo " Minikube IP:"
-                minikube ip 2>/dev/null || echo "Could not get Minikube IP"
+                echo "Cluster IP: $(minikube ip)"
                 
-                # Créer le namespace avec kubectl local
-                echo "Creating namespace..."
-                $WORKSPACE/.local/bin/kubectl create namespace $K8S_NAMESPACE --dry-run=client -o yaml | $WORKSPACE/.local/bin/kubectl apply -f - || echo 'Namespace already exists'
+                # 8. Make kubectl use Minikube context
+                kubectl config use-context minikube
+                kubectl cluster-info
                 
-                # Configurer les permissions Docker (alternative pour conteneur)
-                echo "Configuring Docker permissions..."
-                sudo chmod 666 /var/run/docker.sock 2>/dev/null || true
-                docker ps 2>/dev/null || echo "Docker may need additional setup"
+                # 9. Export variables for later stages
+                echo "export MINIKUBE_IP=$(minikube ip)" >> $BASH_ENV
+                echo "export KUBECONFIG=$HOME/.kube/config" >> $BASH_ENV
+                echo "export PATH=$LOCAL_BIN:$PATH" >> $BASH_ENV
+                
+                echo "✅ Minikube environment setup complete!"
             '''
         }
     }
