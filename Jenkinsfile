@@ -117,37 +117,41 @@ pipeline {
 
         stage('Verify Setup') {
     steps {
-        sh '''
-            echo "=== Environment Verification ==="
-            
-            # Vérifications obligatoires
-            echo "1. Node.js:"
-            node --version || { echo "❌ Node.js not found"; exit 1; }
-            
-            echo "2. npm:"
-            npm --version || { echo "❌ npm not found"; exit 1; }
-            
-            echo "3. Docker:"
-            docker --version || { echo "❌ Docker not found"; exit 1; }
-            
-            # Vérifications optionnelles (avertissement seulement)
-            echo "4. kubectl:"
-            if command -v kubectl &> /dev/null; then
-                kubectl version --client --short
-            else
-                echo "⚠️ kubectl not available - will be installed"
-            fi
-            
-            echo "5. Minikube:"
-            if command -v minikube &> /dev/null; then
-                minikube status 2>/dev/null || echo "Minikube not running"
-            else
-                echo "⚠️ minikube not available - will be installed"
-            fi
-            
-            echo "6. Project Structure:"
-            ls -la
-        '''
+        script {
+            sh '''
+                echo "=== Environment Verification ==="
+                
+                # Vérifications obligatoires
+                echo "1. Node.js:"
+                node --version || { echo "❌ Node.js not found"; exit 1; }
+                
+                echo "2. npm:"
+                npm --version || { echo "❌ npm not found"; exit 1; }
+                
+                echo "3. Docker:"
+                docker --version || { echo "❌ Docker not found"; exit 1; }
+                
+                # Vérifications optionnelles (avertissement seulement)
+                echo "4. kubectl:"
+                if [ -f "$WORKSPACE/.local/bin/kubectl" ]; then
+                    $WORKSPACE/.local/bin/kubectl version --client --short
+                    echo "✓ kubectl installed at: $WORKSPACE/.local/bin/kubectl"
+                else
+                    echo "⚠️ kubectl not available - checking alternative locations"
+                    find $WORKSPACE -name "kubectl" -type f 2>/dev/null | head -3
+                fi
+                
+                echo "5. Minikube:"
+                if command -v minikube &> /dev/null; then
+                    minikube status 2>/dev/null || echo "Minikube not running"
+                else
+                    echo "⚠️ minikube not available - will be installed"
+                fi
+                
+                echo "6. Project Structure:"
+                ls -la
+            '''
+        }
     }
 }
         
@@ -286,11 +290,11 @@ ENDOFFILE
             }
         }
 
-         stage('Setup Minikube') {
+        stage('Setup Minikube') {
     steps {
         script {
             sh '''
-                echo "🔧 Configuration de Minikube..."
+                echo " Configuration de Minikube..."
                 
                 # Démarrer Minikube s\'il n\'est pas démarré
                 if ! minikube status 2>/dev/null | grep -q "Running"; then
@@ -320,12 +324,11 @@ ENDOFFILE
                 minikube status
                 echo " Minikube IP:"
                 minikube ip 2>/dev/null || echo "Could not get Minikube IP"
-            '''
-            
-            // Créer le namespace
-            sh "kubectl create namespace ${K8S_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f - || echo 'Namespace already exists'"
-            
-            sh '''
+                
+                # Créer le namespace avec kubectl local
+                echo "Creating namespace..."
+                $WORKSPACE/.local/bin/kubectl create namespace $K8S_NAMESPACE --dry-run=client -o yaml | $WORKSPACE/.local/bin/kubectl apply -f - || echo 'Namespace already exists'
+                
                 # Configurer les permissions Docker (alternative pour conteneur)
                 echo "Configuring Docker permissions..."
                 sudo chmod 666 /var/run/docker.sock 2>/dev/null || true
@@ -660,126 +663,122 @@ ENDOFFILE
         }
         
         stage('Deploy to Kubernetes') {
-            steps {
-                script {
-                    dir('k8s') {
-                        //  Créer le namespace
-                        sh "kubectl apply -f 00-namespace.yaml"
-                        
-                        //  Créer le secret Kubernetes
-                        sh """
-                            kubectl create secret generic backend-secret \\
-                                --namespace=${K8S_NAMESPACE} \\
-                                --from-literal=DB_PASSWORD=${DB_PASSWORD} \\
-                                --from-literal=JWT_SECRET=${JWT_SECRET} \\
-                                --from-literal=SMTP_PASS=${SMTP_PASS} \\
-                                --dry-run=client -o yaml | kubectl apply -f -
-                        """
-                        
-                        // Appliquer les ConfigMaps
-                        sh "kubectl apply -f 01-configmap.yaml"
-                        
-                        // Déployer MySQL
-                        sh '''
-                            echo " Deploying MySQL..."
-                            kubectl apply -f 02-mysql.yaml
-                            
-                            # Attendre que MySQL soit prêt
-                            echo "Waiting for MySQL to be ready..."
-                            kubectl wait --for=condition=ready pod -l app=mysql -n ${K8S_NAMESPACE} --timeout=300s || echo "MySQL might still be starting"
-                        '''
-                        
-                        //  Déployer le backend
-                        sh '''
-                            echo " Deploying backend..."
-                            kubectl apply -f 03-backend.yaml
-                        '''
-                        
-                        // Déployer le frontend
-                        sh '''
-                            echo " Deploying frontend..."
-                            kubectl apply -f 04-frontend.yaml
-                        '''
-                        
-                        // Déployer l'ingress
-                        sh '''
-                            echo " Deploying ingress..."
-                            kubectl apply -f 05-ingress.yaml
-                        '''
-                        
-                        // Attendre que les pods soient prêts
-                        sh '''
-                            echo " Waiting for pods to be ready..."
-                            sleep 30
-                            
-                            echo " Deployment status:"
-                            kubectl get pods -n ${K8S_NAMESPACE}
-                            kubectl get svc -n ${K8S_NAMESPACE}
-                            kubectl get ingress -n ${K8S_NAMESPACE}
-                            
-                            # Obtenir l'IP Minikube
-                            MINIKUBE_IP=$(minikube ip)
-                            echo " Minikube IP: ${MINIKUBE_IP}"
-                            echo " Ingress Host: smartfalleh.local"
-                        '''
-                    }
-                }
+    steps {
+        script {
+            dir('k8s') {
+                sh '''
+                    KUBECTL="$WORKSPACE/.local/bin/kubectl"
+                    
+                    # 1. Créer le namespace
+                    $KUBECTL apply -f 00-namespace.yaml
+                    
+                    # 2. Créer le secret Kubernetes
+                    $KUBECTL create secret generic backend-secret \\
+                        --namespace=$K8S_NAMESPACE \\
+                        --from-literal=DB_PASSWORD=$DB_PASSWORD \\
+                        --from-literal=JWT_SECRET=$JWT_SECRET \\
+                        --from-literal=SMTP_PASS=$SMTP_PASS \\
+                        --dry-run=client -o yaml | $KUBECTL apply -f -
+                    
+                    # 3. Appliquer les ConfigMaps
+                    $KUBECTL apply -f 01-configmap.yaml
+                    
+                    # 4. Déployer MySQL
+                    echo " Deploying MySQL..."
+                    $KUBECTL apply -f 02-mysql.yaml
+                    
+                    # Attendre que MySQL soit prêt
+                    echo "Waiting for MySQL to be ready..."
+                    $KUBECTL wait --for=condition=ready pod -l app=mysql -n $K8S_NAMESPACE --timeout=300s || echo "MySQL might still be starting"
+                    
+                    # 5. Déployer le backend
+                    echo " Deploying backend..."
+                    $KUBECTL apply -f 03-backend.yaml
+                    
+                    # 6. Déployer le frontend
+                    echo " Deploying frontend..."
+                    $KUBECTL apply -f 04-frontend.yaml
+                    
+                    # 7. Déployer l'ingress
+                    echo " Deploying ingress..."
+                    $KUBECTL apply -f 05-ingress.yaml
+                    
+                    # 8. Attendre que les pods soient prêts
+                    echo " Waiting for pods to be ready..."
+                    sleep 30
+                    
+                    echo " Deployment status:"
+                    $KUBECTL get pods -n $K8S_NAMESPACE
+                    $KUBECTL get svc -n $K8S_NAMESPACE
+                    $KUBECTL get ingress -n $K8S_NAMESPACE
+                    
+                    # Obtenir l'IP Minikube
+                    MINIKUBE_IP=$(minikube ip)
+                    echo " Minikube IP: $MINIKUBE_IP"
+                    echo " Ingress Host: smartfalleh.local"
+                '''
             }
         }
+    }
+}
         
         stage('Configure DNS and Smoke Test') {
-            steps {
-                script {
-                    sh '''
-                        echo " Configuring DNS and testing..."
-                        
-                        # Obtenir l'IP Minikube
-                        MINIKUBE_IP=$(minikube ip)
-                        echo "Minikube IP: ${MINIKUBE_IP}"
-                        
-                        # Configurer /etc/hosts (Linux/Mac)
-                        if [ -f /etc/hosts ]; then
-                            echo " Updating /etc/hosts..."
-                            sudo sed -i.bak '/smartfalleh.local/d' /etc/hosts
-                            echo "${MINIKUBE_IP} smartfalleh.local" | sudo tee -a /etc/hosts
-                            echo " /etc/hosts updated"
-                        fi
-                        
-                        # Attendre que l'application soit prête
-                        echo " Waiting for application to be ready..."
-                        sleep 45
-                        
-                        # Smoke tests
-                        echo " Running smoke tests..."
-                        
-                        # Test frontend
-                        echo "Testing frontend..."
-                        if curl -f http://smartfalleh.local -o /dev/null -w "HTTP Status: %{http_code}\\n" --max-time 30; then
-                            echo "✅ Frontend is accessible"
-                        else
-                            echo "❌ Frontend is not accessible"
-                            exit 1
-                        fi
-                        
-                        # Test backend health endpoint
-                        echo "Testing backend health..."
-                        if curl -f http://smartfalleh.local/api/health -o /dev/null -w "HTTP Status: %{http_code}\\n" --max-time 30; then
-                            echo "✅ Backend health check passed"
-                        else
-                            echo "⚠️ Backend health check failed - checking logs..."
-                            kubectl logs -n ${K8S_NAMESPACE} -l app=backend --tail=50
-                        fi
-                        
-                        echo "🎉 Deployment completed successfully!"
-                        echo "=========================================="
-                        echo "🌍 Application URL: http://smartfalleh.local"
-                        echo "🔧 API URL: http://smartfalleh.local/api"
-                        echo "📊 Kubernetes Dashboard: minikube dashboard"
-                        echo "=========================================="
-                    '''
-                }
-            }
+    steps {
+        script {
+            sh '''
+                echo " Configuring DNS and testing..."
+                
+                # Utiliser kubectl local
+                KUBECTL="$WORKSPACE/.local/bin/kubectl"
+                
+                # Obtenir l'IP Minikube
+                MINIKUBE_IP=$(minikube ip)
+                echo "Minikube IP: $MINIKUBE_IP"
+                
+                # Configurer /etc/hosts (Linux/Mac)
+                if [ -f /etc/hosts ]; then
+                    echo " Updating /etc/hosts..."
+                    sudo sed -i.bak '/smartfalleh.local/d' /etc/hosts
+                    echo "$MINIKUBE_IP smartfalleh.local" | sudo tee -a /etc/hosts
+                    echo " /etc/hosts updated"
+                fi
+                
+                # Attendre que l'application soit prête
+                echo " Waiting for application to be ready..."
+                sleep 45
+                
+                # Smoke tests
+                echo " Running smoke tests..."
+                
+                # Test frontend
+                echo "Testing frontend..."
+                if curl -f http://smartfalleh.local -o /dev/null -w "HTTP Status: %{http_code}\\n" --max-time 30; then
+                    echo "✅ Frontend is accessible"
+                else
+                    echo "❌ Frontend is not accessible"
+                    # Afficher les logs pour debug
+                    $KUBECTL logs -n $K8S_NAMESPACE -l app=frontend --tail=20 || true
+                fi
+                
+                # Test backend health endpoint
+                echo "Testing backend health..."
+                if curl -f http://smartfalleh.local/api/health -o /dev/null -w "HTTP Status: %{http_code}\\n" --max-time 30; then
+                    echo "✅ Backend health check passed"
+                else
+                    echo "⚠️ Backend health check failed - checking logs..."
+                    $KUBECTL logs -n $K8S_NAMESPACE -l app=backend --tail=50 || true
+                fi
+                
+                echo "🎉 Deployment completed successfully!"
+                echo "=========================================="
+                echo "🌍 Application URL: http://smartfalleh.local"
+                echo "🔧 API URL: http://smartfalleh.local/api"
+                echo "📊 Kubernetes Resources: $KUBECTL get all -n $K8S_NAMESPACE"
+                echo "=========================================="
+            '''
         }
+    }
+}
         
         stage('Push Images to Docker Hub') {
             steps {
@@ -931,21 +930,21 @@ stage('Deploy with Scripts') {
             echo "☸️ Deployed to namespace: ${K8S_NAMESPACE}"
         }
         failure {
-            echo "❌ Build or deployment failed"
-            script {
-                sh '''
-                    echo "🔍 Debug information:"
-                    echo "=== Pods status ==="
-                    kubectl get pods -n ${K8S_NAMESPACE} || true
-                    echo "=== Backend logs ==="
-                    kubectl logs -n ${K8S_NAMESPACE} -l app=backend --tail=100 || true
-                    echo "=== Frontend logs ==="
-                    kubectl logs -n ${K8S_NAMESPACE} -l app=frontend --tail=100 || true
-                    echo "=== MySQL logs ==="
-                    kubectl logs -n ${K8S_NAMESPACE} -l app=mysql --tail=100 || true
-                '''
-            }
-        }
+    echo "❌ Build or deployment failed"
+    script {
+        sh '''
+            echo "🔍 Debug information:"
+            echo "=== Pods status ==="
+            $WORKSPACE/.local/bin/kubectl get pods -n $K8S_NAMESPACE 2>/dev/null || echo "kubectl not available"
+            echo "=== Backend logs ==="
+            $WORKSPACE/.local/bin/kubectl logs -n $K8S_NAMESPACE -l app=backend --tail=100 2>/dev/null || true
+            echo "=== Frontend logs ==="
+            $WORKSPACE/.local/bin/kubectl logs -n $K8S_NAMESPACE -l app=frontend --tail=100 2>/dev/null || true
+            echo "=== MySQL logs ==="
+            $WORKSPACE/.local/bin/kubectl logs -n $K8S_NAMESPACE -l app=mysql --tail=100 2>/dev/null || true
+        '''
+    }
+}
         unstable {
             echo "⚠️ Build unstable - tests or linting have warnings"
         }
