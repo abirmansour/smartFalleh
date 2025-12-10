@@ -162,12 +162,7 @@ pipeline {
                 dir('backend') {
                     sh '''
                         npm ci --no-audit
-                        # Installer ESLint si nécessaire
-                        if ! npm list eslint 2>/dev/null | grep -q eslint; then
-                            npm install --save-dev eslint jest-junit@16.0.0 && npm install -g eslint
-                        else
-                            npm install --save-dev jest-junit@16.0.0 || echo "jest-junit already installed"
-                        fi
+                        npm install --save-dev jest-junit@16.0.0 || echo "jest-junit already installed"
                     '''
                 }
             }
@@ -177,12 +172,7 @@ pipeline {
                 dir('frontend') {
                     sh '''
                         npm ci --no-audit
-                        # Installer ESLint si nécessaire
-                        if ! npm list eslint 2>/dev/null | grep -q eslint; then
-                            npm install --save-dev eslint jest-junit@16.0.0 && npm install -g eslint
-                        else
-                            npm install --save-dev jest-junit@16.0.0 || echo "jest-junit already installed"
-                        fi
+                        npm install --save-dev jest-junit@16.0.0 || echo "jest-junit already installed"
                     '''
                 }
             }
@@ -191,27 +181,23 @@ pipeline {
 }
         
         stage('Lint and Code Quality') {
-    parallel {
-        stage('Backend Lint') {
-            steps {
-                dir('backend') {
-                    sh '''
-                        npx eslint "{src,apps,libs,test}/**/*.ts" --fix --quiet || echo "Backend linting completed with warnings - continuing build"
-                    '''
+            parallel {
+                stage('Backend Lint') {
+                    steps {
+                        dir('backend') {
+                            sh 'npm run lint:ci || echo "Backend linting completed with warnings - continuing build"'
+                        }
+                    }
+                }
+                stage('Frontend Lint') {
+                    steps {
+                        dir('frontend') {
+                            sh 'npm run lint || echo "Frontend linting completed with issues - continuing build"'
+                        }
+                    }
                 }
             }
         }
-        stage('Frontend Lint') {
-            steps {
-                dir('frontend') {
-                    sh '''
-                        npx eslint . --ext .js,.jsx --fix || echo "Frontend linting completed with issues - continuing build"
-                    '''
-                }
-            }
-        }
-    }
-}
         
         stage('Run Tests') {
             parallel {
