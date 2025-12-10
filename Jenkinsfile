@@ -723,49 +723,61 @@ ENDOFFILE
                     $KUBECTL apply -f 00-namespace.yaml
                     
                     # 2. Créer le secret Kubernetes
-                    $KUBECTL create secret generic backend-secret \\
-                        --namespace=$K8S_NAMESPACE \\
-                        --from-literal=DB_PASSWORD=$DB_PASSWORD \\
-                        --from-literal=JWT_SECRET=$JWT_SECRET \\
-                        --from-literal=SMTP_PASS=$SMTP_PASS \\
-                        --dry-run=client -o yaml | $KUBECTL apply -f -
+                    # D'abord créer le fichier temporaire
+                    cat > backend-secret.yaml <<EOF
+apiVersion: v1
+kind: Secret
+metadata:
+  name: backend-secret
+  namespace: smartfalleh
+type: Opaque
+data:
+  DB_PASSWORD: $(echo -n "$DB_PASSWORD" | base64)
+  JWT_SECRET: $(echo -n "$JWT_SECRET" | base64)
+  SMTP_PASS: $(echo -n "$SMTP_PASS" | base64)
+EOF
+                    
+                    # Appliquer le secret
+                    $KUBECTL apply -f backend-secret.yaml
                     
                     # 3. Appliquer les ConfigMaps
                     $KUBECTL apply -f 01-configmap.yaml
                     
                     # 4. Déployer MySQL
-                    echo " Deploying MySQL..."
+                    echo "Deploying MySQL..."
                     $KUBECTL apply -f 02-mysql.yaml
                     
                     # Attendre que MySQL soit prêt
                     echo "Waiting for MySQL to be ready..."
-                    $KUBECTL wait --for=condition=ready pod -l app=mysql -n $K8S_NAMESPACE --timeout=300s || echo "MySQL might still be starting"
+                    $KUBECTL wait --for=condition=ready pod -l app=mysql -n smartfalleh --timeout=300s || echo "MySQL might still be starting"
                     
                     # 5. Déployer le backend
-                    echo " Deploying backend..."
+                    echo "Deploying backend..."
                     $KUBECTL apply -f 03-backend.yaml
                     
                     # 6. Déployer le frontend
-                    echo " Deploying frontend..."
+                    echo "Deploying frontend..."
                     $KUBECTL apply -f 04-frontend.yaml
                     
                     # 7. Déployer l'ingress
-                    echo " Deploying ingress..."
+                    echo "Deploying ingress..."
                     $KUBECTL apply -f 05-ingress.yaml
                     
                     # 8. Attendre que les pods soient prêts
-                    echo " Waiting for pods to be ready..."
+                    echo "Waiting for pods to be ready..."
                     sleep 30
                     
-                    echo " Deployment status:"
-                    $KUBECTL get pods -n $K8S_NAMESPACE
-                    $KUBECTL get svc -n $K8S_NAMESPACE
-                    $KUBECTL get ingress -n $K8S_NAMESPACE
+                    echo "Deployment status:"
+                    $KUBECTL get pods -n smartfalleh
+                    $KUBECTL get svc -n smartfalleh
+                    $KUBECTL get ingress -n smartfalleh
                     
                     # Obtenir l'IP Minikube
                     MINIKUBE_IP=$(minikube ip)
-                    echo " Minikube IP: $MINIKUBE_IP"
-                    echo " Ingress Host: smartfalleh.local"
+                    echo "Minikube IP: $MINIKUBE_IP"
+                    echo "Ingress Host: smartfalleh.local"
+                    echo "To access the application, add to /etc/hosts:"
+                    echo "$MINIKUBE_IP smartfalleh.local"
                 '''
             }
         }
