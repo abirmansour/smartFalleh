@@ -14,6 +14,9 @@ pipeline {
     }
     
     environment {
+
+        PATH = "$WORKSPACE/.local/bin:/var/jenkins_home/.local/bin:$PATH"
+        
         // SECRETS 
         DB_PASSWORD = credentials('smartfalleh-db-password')
         JWT_SECRET = credentials('jwt_key')
@@ -28,6 +31,7 @@ pipeline {
         // KUBERNETES CONFIGURATION
         K8S_NAMESPACE = 'smartfalleh'
         MINIKUBE_IP = ''
+        
         
         // APPLICATION URLs
         REACT_APP_API_URL = 'http://smartfalleh.local/api'
@@ -671,59 +675,73 @@ ENDOFFILE
       
         
         stage('Build Docker Images for Minikube') {
-            steps {
-                script {
-                    echo "Building Docker images for Minikube..."
-                    
-                    sh '''
-                        echo "🔨 Building backend image..."
-                        docker build \
-                            -t ${DOCKER_REGISTRY}/smartfalleh:backend-${DOCKER_TAG} \
-                            --build-arg NODE_ENV=${NODE_ENV} \
-                            --build-arg PORT=${PORT} \
-                            --build-arg DB_HOST=${DB_HOST} \
-                            --build-arg DB_PORT=${DB_PORT} \
-                            --build-arg DB_USERNAME=${DB_USERNAME} \
-                            --build-arg DB_DATABASE=${DB_DATABASE} \
-                            --build-arg JWT_SECRET=${JWT_SECRET} \
-                            --build-arg JWT_EXPIRES_IN=${JWT_EXPIRES_IN} \
-                            --build-arg EMAIL_USER=${EMAIL_USER} \
-                            --build-arg SMTP_PASS=${SMTP_PASS} \
-                            --build-arg SMTP_HOST=${SMTP_HOST} \
-                            --build-arg SMTP_PORT=${SMTP_PORT} \
-                            --build-arg SMTP_USER=${SMTP_USER} \
-                            --build-arg SMTP_FROM="${SMTP_FROM}" \
-                            -f backend/Dockerfile ./backend || echo "⚠️ Backend build warning"
-                    '''
-                    
-                    sh '''
-                        echo "🔨 Building frontend image..."
-                        docker build \
-                            -t ${DOCKER_REGISTRY}/smartfalleh:frontend-${DOCKER_TAG} \
-                            --build-arg REACT_APP_API_URL=${REACT_APP_API_URL} \
-                            -f frontend/Dockerfile ./frontend || echo "⚠️ Frontend build warning"
-                    '''
-                    
-                    sh '''
-                        echo "✅ Images Docker construites:"
-                        docker images | grep smartfalleh
-                    '''
-                }
-            }
+    steps {
+        script {
+            echo "Building Docker images for Minikube..."
+            
+            // Build backend 
+            sh '''
+                echo "🔨 Building backend image..."
+                cd backend
+                docker build -t doffy01/smartfalleh:backend-${BUILD_NUMBER} \
+                  --build-arg NODE_ENV=production \
+                  --build-arg PORT=3000 \
+                  --build-arg DB_HOST=mysql-service \
+                  --build-arg DB_PORT=3306 \
+                  --build-arg DB_USERNAME="$DB_USERNAME" \
+                  --build-arg DB_DATABASE="$DB_DATABASE" \
+                  --build-arg JWT_SECRET="$JWT_SECRET" \
+                  --build-arg JWT_EXPIRES_IN=1h \
+                  --build-arg EMAIL_USER="$EMAIL_USER" \
+                  --build-arg SMTP_PASS="$SMTP_PASS" \
+                  --build-arg SMTP_HOST="$SMTP_HOST" \
+                  --build-arg SMTP_PORT="$SMTP_PORT" \
+                  --build-arg SMTP_USER="$SMTP_USER" \
+                  --build-arg SMTP_FROM="$SMTP_FROM" \
+                  -f Dockerfile .
+                cd ..
+            '''
+            
+            // Build frontend
+            sh '''
+                echo "🔨 Building frontend image..."
+                docker build -t doffy01/smartfalleh:frontend-${BUILD_NUMBER} \
+                  --build-arg REACT_APP_API_URL=http://smartfalleh.local/api \
+                  -f frontend/Dockerfile ./frontend
+            '''
+            
+            // Verify images
+            sh '''
+                echo "✅ Docker images built:"
+                docker images | grep smartfalleh
+            '''
         }
+    }
+}
         
         stage('Deploy to Kubernetes') {
     steps {
         script {
             dir('k8s') {
                 sh '''
-                    KUBECTL="$WORKSPACE/.local/bin/kubectl"
+                    # Add both minikube and kubectl to PATH
+                    export PATH="/var/jenkins_home/.local/bin:$WORKSPACE/.local/bin:$PATH"
+                    KUBECTL="kubectl"
                     
-                    # 1. Créer le namespace
+                    echo "=== Tool Verification ==="
+                    which kubectl && kubectl version --client
+                    which minikube && minikube version
+                    
+                    # 1. Enable storage addon if needed
+                    echo "Checking Minikube storage addon..."
+                    minikube addons enable storage-provisioner || true
+                    
+                    # 2. Create namespace
+                    echo "Creating namespace..."
                     $KUBECTL apply -f 00-namespace.yaml
                     
-                    # 2. Créer le secret Kubernetes
-                    # D'abord créer le fichier temporaire
+                    # 3. Create backend secret
+                    echo "Creating backend secret..."
                     cat > backend-secret.yaml <<EOF
 apiVersion: v1
 kind: Secret
@@ -737,53 +755,103 @@ data:
   SMTP_PASS: $(echo -n "$SMTP_PASS" | base64)
 EOF
                     
-                    # Appliquer le secret
                     $KUBECTL apply -f backend-secret.yaml
                     
-                    # 3. Appliquer les ConfigMaps
+                    # 4. Apply ConfigMaps
+                    echo "Creating configmaps..."
                     $KUBECTL apply -f 01-configmap.yaml
                     
-                    # 4. Déployer MySQL
+                    # 5. Deploy MySQL with debugging
                     echo "Deploying MySQL..."
                     $KUBECTL apply -f 02-mysql.yaml
                     
-                    # Attendre que MySQL soit prêt
-                    echo "Waiting for MySQL to be ready..."
-                    $KUBECTL wait --for=condition=ready pod -l app=mysql -n smartfalleh --timeout=300s || echo "MySQL might still be starting"
+                    # Check PVC status
+                    echo "Checking PVC status..."
+                    for i in {1..30}; do
+                        PVC_STATUS=$($KUBECTL get pvc mysql-pvc -n smartfalleh -o jsonpath='{.status.phase}' 2>/dev/null || echo "Pending")
+                        echo "PVC Status (attempt $i): $PVC_STATUS"
+                        if [ "$PVC_STATUS" = "Bound" ]; then
+                            echo "PVC is bound successfully"
+                            break
+                        fi
+                        sleep 10
+                    done
                     
-                    # 5. Déployer le backend
+                    # 6. Check MySQL pod events
+                    echo "MySQL pod events:"
+                    $KUBECTL describe pod -n smartfalleh -l app=mysql || true
+                    
+                    # 7. Deploy backend
                     echo "Deploying backend..."
                     $KUBECTL apply -f 03-backend.yaml
                     
-                    # 6. Déployer le frontend
+                    # 8. Deploy frontend
                     echo "Deploying frontend..."
                     $KUBECTL apply -f 04-frontend.yaml
                     
-                    # 7. Déployer l'ingress
+                    # 9. Deploy ingress
                     echo "Deploying ingress..."
                     $KUBECTL apply -f 05-ingress.yaml
                     
-                    # 8. Attendre que les pods soient prêts
-                    echo "Waiting for pods to be ready..."
-                    sleep 30
+                    # 10. Wait for pods with improved logic
+                    echo "Waiting for pods..."
                     
-                    echo "Deployment status:"
-                    $KUBECTL get pods -n smartfalleh
-                    $KUBECTL get svc -n smartfalleh
-                    $KUBECTL get ingress -n smartfalleh
+                    # Wait for backend (allow init container to run)
+                    echo "Waiting for backend pods..."
+                    for i in {1..60}; do
+                        BACKEND_PHASE=$($KUBECTL get pods -n smartfalleh -l app=backend -o jsonpath='{.items[*].status.phase}' 2>/dev/null || echo "Pending")
+                        echo "Backend phase (attempt $i): $BACKEND_PHASE"
+                        if echo "$BACKEND_PHASE" | grep -q "Running"; then
+                            echo "Backend pods are running"
+                            break
+                        fi
+                        sleep 5
+                    done
                     
-                    # Obtenir l'IP Minikube
-                    MINIKUBE_IP=$(minikube ip)
+                    # Wait for frontend
+                    echo "Waiting for frontend pods..."
+                    for i in {1..30}; do
+                        FRONTEND_PHASE=$($KUBECTL get pods -n smartfalleh -l app=frontend -o jsonpath='{.items[*].status.phase}' 2>/dev/null || echo "Pending")
+                        echo "Frontend phase (attempt $i): $FRONTEND_PHASE"
+                        if echo "$FRONTEND_PHASE" | grep -q "Running"; then
+                            echo "Frontend pods are running"
+                            break
+                        fi
+                        sleep 5
+                    done
+                    
+                    # 11. Final status
+                    echo "=== Final Deployment Status ==="
+                    $KUBECTL get all -n smartfalleh
+                    
+                    # 12. Minikube IP
+                    MINIKUBE_IP=$(minikube ip 2>/dev/null || echo "N/A")
                     echo "Minikube IP: $MINIKUBE_IP"
-                    echo "Ingress Host: smartfalleh.local"
-                    echo "To access the application, add to /etc/hosts:"
-                    echo "$MINIKUBE_IP smartfalleh.local"
+                    
+                    if [ "$MINIKUBE_IP" != "N/A" ]; then
+                        echo "=== Application URLs ==="
+                        echo "Frontend: http://smartfalleh.local"
+                        echo "Backend API: http://smartfalleh.local/api"
+                        echo ""
+                        echo "To access from your machine, add to /etc/hosts:"
+                        echo "$MINIKUBE_IP smartfalleh.local"
+                    fi
+                    
+                    # 13. Debug information
+                    echo "=== Debug Info ==="
+                    echo "PVCs:"
+                    $KUBECTL get pvc -n smartfalleh
+                    echo ""
+                    echo "Storage classes:"
+                    $KUBECTL get storageclass
+                    echo ""
+                    echo "Pod events summary:"
+                    $KUBECTL get events -n smartfalleh --sort-by='.lastTimestamp'
                 '''
             }
         }
     }
-}
-        
+}    
         stage('Configure DNS and Smoke Test') {
     steps {
         script {
