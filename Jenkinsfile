@@ -973,6 +973,36 @@ SIMPLE
     }
 }
 
+        stage('Push Images to Docker Hub') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(
+                        credentialsId: 'docker_jenkins',
+                        usernameVariable: 'DOCKER_HUB_USER',
+                        passwordVariable: 'DOCKER_HUB_PASSWORD'
+                    )]) {
+                        sh '''
+                            echo "📤 Pushing Docker images to Docker Hub..."
+                            
+                            # Se connecter à Docker Hub
+                            echo "${DOCKER_HUB_PASSWORD}" | docker login -u "${DOCKER_HUB_USER}" --password-stdin
+                            
+                            # Push backend image
+                            echo "Pushing backend image..."
+                            docker push ${DOCKER_REGISTRY}/smartfalleh:backend-${DOCKER_TAG} || echo "⚠️ Backend push failed, continuing..."
+                            
+                            # Push frontend image
+                            echo "Pushing frontend image..."
+                            docker push ${DOCKER_REGISTRY}/smartfalleh:frontend-${DOCKER_TAG} || echo "⚠️ Frontend push failed, continuing..."
+                            
+                            echo "✅ Images pushed to Docker Hub"
+                        '''
+                    }
+                }
+            }
+        }
+
+
 stage('Deploy to Kubernetes') {
     steps {
         script {
@@ -1165,34 +1195,6 @@ EOF
     }
 }
         
-        stage('Push Images to Docker Hub') {
-            steps {
-                script {
-                    withCredentials([usernamePassword(
-                        credentialsId: 'docker_jenkins',
-                        usernameVariable: 'DOCKER_HUB_USER',
-                        passwordVariable: 'DOCKER_HUB_PASSWORD'
-                    )]) {
-                        sh '''
-                            echo "📤 Pushing Docker images to Docker Hub..."
-                            
-                            # Se connecter à Docker Hub
-                            echo "${DOCKER_HUB_PASSWORD}" | docker login -u "${DOCKER_HUB_USER}" --password-stdin
-                            
-                            # Push backend image
-                            echo "Pushing backend image..."
-                            docker push ${DOCKER_REGISTRY}/smartfalleh:backend-${DOCKER_TAG} || echo "⚠️ Backend push failed, continuing..."
-                            
-                            # Push frontend image
-                            echo "Pushing frontend image..."
-                            docker push ${DOCKER_REGISTRY}/smartfalleh:frontend-${DOCKER_TAG} || echo "⚠️ Frontend push failed, continuing..."
-                            
-                            echo "✅ Images pushed to Docker Hub"
-                        '''
-                    }
-                }
-            }
-        }
 
 
 stage('Deploy with Scripts') {
