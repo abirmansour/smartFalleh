@@ -672,7 +672,7 @@ ENDOFFILE
             }
         }
         
-     stage('Build Docker Images for Minikube') {
+stage('Build Docker Images for Minikube') {
     environment {
         DOCKER_BUILDKIT = '1'
         BUILDKIT_PROGRESS = 'plain'
@@ -688,124 +688,43 @@ ENDOFFILE
     
     steps {
         script {
+            // 1. Cleanup old configmap file (optional)
             sh '''
-                echo "=== Preparing for Docker Build ==="
-                
-                # Clean Docker cache
-                docker builder prune -f
-                
-                # 1. Create prisma directory
-                echo "=== Creating prisma directory ==="
-                mkdir -p backend/prisma
-                
-                # 2. Create schema.prisma file with the correct schema
-                echo "=== Creating schema.prisma ==="
-                
-                cat > backend/prisma/schema.prisma << 'EOF'
-                generator client {
-                  provider = "prisma-client-js"
-                }
-                
-                datasource db {
-                  provider = "mysql"
-                  url      = env("DATABASE_URL")
-                }
-                
-                model User {
-                  id                String      @id @default(uuid())
-                  nom               String      @db.VarChar(100)
-                  prenom           String?     @db.VarChar(100)
-                  email            String      @unique @db.VarChar(150)
-                  password         String      @db.VarChar(255)
-                  telephone        String?     @db.VarChar(50)
-                  adresse          String?     @db.Text
-                  role             String      @db.Enum('admin', 'agriculteur', 'jury', 'responsable') @default('responsable')
-                  etat             String      @default('inactive') @db.Enum('active', 'inactive')
-                  cooperativeId    String?     @db.VarChar(36)
-                  cooperative      Cooperative? @relation(fields: [cooperativeId], references: [id])
-                  resetPasswordToken String?   @db.VarChar(255)
-                  resetPasswordExpires DateTime?
-                  createdAt        DateTime    @default(now())
-                  updatedAt        DateTime    @updatedAt
-                  deletedAt        DateTime?   @map("deleted_at")
-                }
-                
-                model Cooperative {
-                  id              String      @id @default(uuid())
-                  nom             String      @db.VarChar(255)
-                  gouvernorat     String      @db.VarChar(100)
-                  telephone       String      @db.VarChar(50)
-                  adresse         String      @db.Text
-                  responsables    User[]
-                  responsable     String?     @db.VarChar(255)
-                }
-                
-                model Demande {
-                  id                String    @id @default(uuid())
-                  nom               String    @db.VarChar(100)
-                  prenom           String    @db.VarChar(100)
-                  telephone        String    @db.VarChar(50)
-                  email            String    @db.VarChar(150)
-                  adresse          String    @db.Text
-                  region           String    @db.VarChar(100)
-                  superficieFerme  Float
-                  nombreVaches     Int
-                  role             String    @db.VarChar(50)
-                  numeroDemande    String    @unique @db.VarChar(100)
-                  statut           String    @default('En attente') @db.VarChar(50)
-                  referenceVache   String?   @db.VarChar(100)
-                  validateNombreVaches Int?
-                  notes           String?   @db.Text
-                  eligible        Boolean?
-                  validatedAt     DateTime?
-                  validatedBy     String?   @db.VarChar(100)
-                }
-                EOF
-                
-                echo "✅ Created schema.prisma"
-                echo "=== Schema preview ==="
-                head -n 20 backend/prisma/schema.prisma
-                echo "..."
-                
-                # 3. Update Dockerfile to use the correct schema path
-                echo "=== Updating Dockerfile ==="
-                
-                # Check current Dockerfile content
-                echo "=== Current Dockerfile (relevant lines) ==="
-                grep -A2 -B2 "COPY.*prisma" backend/Dockerfile || true
-                
-                # Fix the prisma schema copy line if needed
-                if grep -q "COPY.*07-prisma-configmap.yaml" backend/Dockerfile; then
-                    echo "Fixing Dockerfile COPY line..."
-                    sed -i 's|COPY.*07-prisma-configmap.yaml.*|COPY prisma/schema.prisma ./prisma/schema.prisma|' backend/Dockerfile
-                    
-                    echo "=== Updated Dockerfile line ==="
-                    grep "COPY.*prisma" backend/Dockerfile
-                else
-                    echo "Dockerfile already has correct COPY line"
+                echo "=== Cleaning up old configmap file ==="
+                if [ -f "k8s/07-prisma-configmap.yaml" ]; then
+                    echo "Removing old k8s/07-prisma-configmap.yaml"
+                    rm -f k8s/07-prisma-configmap.yaml
                 fi
             '''
             
-            // Build backend
+            // 2. Build backend
             sh '''
                 echo "=== Building Backend Image ==="
                 cd backend
                 
-                # Verify the schema.prisma exists
                 echo "=== Verifying files ==="
-                ls -la prisma/ || echo "prisma directory not found"
-                [ -f prisma/schema.prisma ] && echo "schema.prisma exists" || echo "schema.prisma NOT found"
+                echo "Checking if schema.prisma exists:"
+                if [ -f "prisma/schema.prisma" ]; then
+                    echo "✅ schema.prisma found"
+                    echo "First few lines:"
+                    head -5 prisma/schema.prisma
+                else
+                    echo "❌ ERROR: prisma/schema.prisma not found!"
+                    echo "Please create backend/prisma/schema.prisma manually"
+                    exit 1
+                fi
                 
-                # Verify Dockerfile
-                echo "=== Dockerfile content (relevant part) ==="
-                grep -n "COPY.*prisma" Dockerfile
-                
-                # Test Docker build with debug
-                echo "=== Testing Docker build context ==="
-                docker build --no-cache --progress=plain -t test-build -f Dockerfile . 2>&1 | tail -100 || echo "Build test failed"
+                echo "Checking Dockerfile:"
+                if grep -q "COPY prisma/schema.prisma" Dockerfile; then
+                    echo "✅ Dockerfile has correct COPY command"
+                else
+                    echo "❌ ERROR: Dockerfile missing correct COPY command"
+                    echo "Please update Dockerfile to include: COPY prisma/schema.prisma ./prisma/schema.prisma"
+                    exit 1
+                fi
                 
                 # Actual build
-                echo "=== Starting actual build ==="
+                echo "=== Starting backend build ==="
                 docker build \
                     --no-cache \
                     --build-arg NODE_ENV=production \
@@ -835,7 +754,7 @@ ENDOFFILE
                 cd ..
             '''
             
-            // Build frontend
+            // 3. Build frontend
             sh '''
                 echo "=== Building Frontend Image ==="
                 
@@ -877,7 +796,7 @@ DOCKERFILE
                 fi
             '''
             
-            // Verify
+            // 4. Verify builds
             sh '''
                 echo "=== Build Results ==="
                 echo "Docker images created:"
@@ -886,10 +805,15 @@ DOCKERFILE
                 echo ""
                 echo "=== Image sizes ==="
                 docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | grep smartfalleh || true
+                
+                echo ""
+                echo "=== Backend image layers ==="
+                docker history doffy01/smartfalleh:backend-${BUILD_NUMBER} --format "table {{.CreatedBy}}\t{{.Size}}" | head -10
             '''
         }
     }
 }
+
 stage('Deploy to Kubernetes') {
     steps {
         script {

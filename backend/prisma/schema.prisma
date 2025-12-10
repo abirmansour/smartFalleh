@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String      @id @default(uuid())
+  nom               String      @db.VarChar(100)
+  prenom            String?     @db.VarChar(100)
+  email             String      @unique @db.VarChar(150)
+  password          String      @db.VarChar(255)
+  telephone         String?     @db.VarChar(50)
+  adresse           String?     @db.Text
+  role              String      @db.Enum('admin', 'agriculteur', 'jury', 'responsable') @default('responsable')
+  etat              String      @default('inactive') @db.Enum('active', 'inactive')
+  cooperativeId     String?     @db.VarChar(36)
+  cooperative       Cooperative? @relation(fields: [cooperativeId], references: [id])
+  resetPasswordToken String?    @db.VarChar(255)
+  resetPasswordExpires DateTime?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  deletedAt         DateTime?   @map("deleted_at")
+}
+
+model Cooperative {
+  id              String      @id @default(uuid())
+  nom             String      @db.VarChar(255)
+  gouvernorat     String      @db.VarChar(100)
+  telephone       String      @db.VarChar(50)
+  adresse         String      @db.Text
+  responsables    User[]
+  responsable     String?     @db.VarChar(255)
+}
+
+model Demande {
+  id                String    @id @default(uuid())
+  nom               String    @db.VarChar(100)
+  prenom            String    @db.VarChar(100)
+  telephone         String    @db.VarChar(50)
+  email             String    @db.VarChar(150)
+  adresse           String    @db.Text
+  region            String    @db.VarChar(100)
+  superficieFerme   Float
+  nombreVaches      Int
+  role              String    @db.VarChar(50)
+  numeroDemande     String    @unique @db.VarChar(100)
+  statut            String    @default('En attente') @db.VarChar(50)
+  referenceVache    String?   @db.VarChar(100)
+  validateNombreVaches Int?
+  notes             String?   @db.Text
+  eligible          Boolean?
+  validatedAt       DateTime?
+  validatedBy       String?   @db.VarChar(100)
+}

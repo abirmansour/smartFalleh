@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: prisma-schema
-  namespace: smartfalleh
-data:
-  schema.prisma: | # On le crée dynamiquement dans Jenkins
