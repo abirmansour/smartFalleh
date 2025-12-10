@@ -754,66 +754,199 @@ stage('Build Docker Images for Minikube') {
                 cd ..
             '''
             
-            // 3. Build frontend WITH TIMEOUT
+            // 3. PREPARE FRONTEND BEFORE BUILD
             sh '''
-                echo "=== Building Frontend Image ==="
+                echo "=== Preparing Frontend for Build ==="
                 
                 if [ -d "frontend" ]; then
                     echo "Frontend directory exists"
                     
-                    # Create a simpler, faster Dockerfile with timeout
-                    cat > frontend/Dockerfile.simple << 'DOCKERFILE'
+                    # Go to frontend directory and fix dependencies
+                    cd frontend
+                    
+                    echo "1. Checking and fixing dependencies..."
+                    
+                    # Check if package.json has react-icons
+                    if ! grep -q "react-icons" package.json; then
+                        echo "⚠️ react-icons not found in package.json, adding..."
+                        npm install react-icons@^4.12.0 --save --no-audit --no-fund --no-progress
+                    fi
+                    
+                    echo "2. Installing all dependencies locally first..."
+                    npm cache clean --force
+                    npm install --legacy-peer-deps --no-audit --no-fund --no-progress
+                    
+                    echo "3. Verifying react-icons installation..."
+                    npm list react-icons 2>/dev/null || npm install react-icons@latest --save --no-audit --no-fund
+                    
+                    echo "4. Test build locally..."
+                    NODE_OPTIONS="--max-old-space-size=4096" npm run build 2>&1 | tee /tmp/frontend-build-test.log
+                    
+                    if [ $? -eq 0 ]; then
+                        echo "✅ Local test build successful"
+                        # Clean up test build
+                        rm -rf dist
+                    else
+                        echo "⚠️ Local test build failed, checking errors..."
+                        tail -50 /tmp/frontend-build-test.log
+                        
+                        # Check for specific react-icons error
+                        if grep -q "react-icons/fa" /tmp/frontend-build-test.log; then
+                            echo "❗ Found react-icons error, checking Contact.jsx..."
+                            if [ -f "src/components/Contact/Contact.jsx" ]; then
+                                echo "Current import in Contact.jsx:"
+                                grep -n "react-icons" src/components/Contact/Contact.jsx
+                                
+                                # Fix import if needed
+                                sed -i 's|from '\''react-icons/fa'\''|from '\''react-icons/fa'\''|' src/components/Contact/Contact.jsx
+                                sed -i 's|import.*from.*react-icons.*fa.*|import { FaEnvelope, FaPhone, FaMapMarkerAlt } from '\''react-icons/fa'\'';|' src/components/Contact/Contact.jsx
+                                
+                                echo "Fixed imports in Contact.jsx"
+                            fi
+                        fi
+                        
+                        echo "Retrying build after fixes..."
+                        npm install --legacy-peer-deps --no-audit --no-fund --no-progress
+                        NODE_OPTIONS="--max-old-space-size=4096" npm run build || echo "Build still failing, but will try Docker anyway"
+                    fi
+                    
+                    cd ..
+                    
+            '''
+            
+            // 4. Build frontend
+            sh '''
+                echo "=== Building Frontend Image ==="
+                
+                if [ -d "frontend" ]; then
+                    echo "Creating optimized Dockerfile..."
+                    
+                    # Create a better Dockerfile that handles react-icons properly
+                    cat > frontend/Dockerfile.optimized << 'DOCKERFILE'
 FROM node:22-alpine as builder
 
 # Set npm configs for faster installation
 RUN npm config set registry https://registry.npmjs.org/ && \
-    npm config set fetch-retry-maxtimeout 120000 && \
-    npm config set fetch-retries 3 && \
-    npm config set maxsockets 1 && \
+    npm config set fetch-retry-maxtimeout 300000 && \
+    npm config set fetch-retries 10 && \
+    npm config set maxsockets 3 && \
     npm config set prefer-offline true
 
 WORKDIR /app
+
+# Copy package files first
 COPY package*.json ./
 
-# Install with timeout
-RUN timeout 300 npm ci --no-audit --no-fund --no-progress || \
-    (echo "npm ci timed out, trying with offline mode..." && \
-     timeout 180 npm ci --prefer-offline --no-audit --no-fund --no-progress || \
-     echo "Installation completed with warnings")
+# Clean npm cache and install with multiple fallbacks
+RUN npm cache clean --force && \
+    (npm ci --no-audit --no-fund --no-progress || \
+     (echo "npm ci failed, trying npm install..." && \
+      npm install --legacy-peer-deps --no-audit --no-fund --no-progress) || \
+     (echo "Still failing, trying offline..." && \
+      npm ci --prefer-offline --no-audit --no-fund --no-progress))
 
+# Verify react-icons is installed
+RUN npm list react-icons 2>/dev/null || npm install react-icons@latest --no-audit --no-fund --no-progress
+
+# Copy all source code
 COPY . .
 
-# Build with timeout
-RUN timeout 180 npm run build || \
-    (echo "Build timed out or failed" && exit 1)
+# Check Contact.jsx file
+RUN echo "Checking Contact component..." && \
+    if [ -f "src/components/Contact/Contact.jsx" ]; then \
+        echo "Contact.jsx found:"; \
+        grep -i "react-icons" src/components/Contact/Contact.jsx || echo "No react-icons import found"; \
+    else \
+        echo "Warning: Contact.jsx not found"; \
+    fi
+
+# Set memory limit for build
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
+# Build with timeout and better error handling
+RUN echo "Starting build..." && \
+    (timeout 300 npm run build || \
+     (echo "Build failed, checking for common issues..." && \
+      echo "Build logs:" && \
+      cat /tmp/build.log 2>/dev/null || true && \
+      exit 1))
 
 FROM nginx:alpine
-COPY --from=builder /app/build /usr/share/nginx/html
+
+# Create non-root user for security
+RUN addgroup -g 1001 -S nginxuser && \
+    adduser -S -D -H -u 1001 -h /var/cache/nginx -s /sbin/nologin -G nginxuser nginxuser
+
+# Remove default config
+RUN rm -f /etc/nginx/conf.d/default.conf
+
+# Copy built assets
+COPY --from=builder --chown=nginxuser:nginxuser /app/dist /usr/share/nginx/html
+
+# Copy custom nginx config if exists
+COPY nginx/nginx.conf /etc/nginx/conf.d/default.conf 2>/dev/null || \
+    echo "events {} http { server { listen 80; root /usr/share/nginx/html; location / { try_files \$uri \$uri/ /index.html; } } }" > /etc/nginx/nginx.conf
+
+# Set permissions
+RUN chmod -R 755 /usr/share/nginx/html
+
 EXPOSE 80
+USER nginxuser
 CMD ["nginx", "-g", "daemon off;"]
 DOCKERFILE
                     
-                    echo "Building frontend with timeout..."
+                    echo "Building frontend Docker image..."
                     
-                    # Build with network optimizations
+                    # Build with improved settings
                     docker build \
                         --network=host \
+                        --no-cache \
                         --build-arg REACT_APP_API_URL=http://smartfalleh.local/api \
                         -t "doffy01/smartfalleh:frontend-${BUILD_NUMBER}" \
-                        -f frontend/Dockerfile.simple ./frontend
+                        -f frontend/Dockerfile.optimized ./frontend
                     
-                    if [ $? -eq 0 ]; then
-                        echo "✅ Frontend image built"
+                    BUILD_RESULT=$?
+                    
+                    if [ $BUILD_RESULT -eq 0 ]; then
+                        echo "✅ Frontend Docker build successful"
                     else
-                        echo "⚠️ Frontend build had issues, but continuing..."
-                        # Don't exit on frontend failure for now
+                        echo "⚠️ Frontend Docker build failed with code: $BUILD_RESULT"
+                        
+                        # Try one more time with simpler Dockerfile
+                        echo "Trying alternative build method..."
+                        cat > /tmp/Dockerfile.simple << 'SIMPLE'
+FROM node:22-alpine
+WORKDIR /app
+COPY frontend/package*.json ./
+RUN npm install --legacy-peer-deps --no-audit --no-fund
+COPY frontend/ .
+RUN npm run build
+FROM nginx:alpine
+COPY --from=0 /app/dist /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+SIMPLE
+                        
+                        docker build \
+                            -t "doffy01/smartfalleh:frontend-${BUILD_NUMBER}-alt" \
+                            -f /tmp/Dockerfile.simple .
+                            
+                        if [ $? -eq 0 ]; then
+                            echo "✅ Alternative frontend build successful"
+                            # Tag it properly
+                            docker tag "doffy01/smartfalleh:frontend-${BUILD_NUMBER}-alt" "doffy01/smartfalleh:frontend-${BUILD_NUMBER}"
+                            docker rmi "doffy01/smartfalleh:frontend-${BUILD_NUMBER}-alt"
+                        else
+                            echo "❌ All frontend build attempts failed"
+                            echo "⚠️ Continuing pipeline without frontend image..."
+                        fi
                     fi
                 else
                     echo "⚠️ No frontend directory, skipping frontend build"
                 fi
             '''
             
-            // 4. Verify builds
+            // 5. Verify builds
             sh '''
                 echo "=== Build Results ==="
                 echo "Docker images created:"
@@ -822,6 +955,19 @@ DOCKERFILE
                 echo ""
                 echo "=== Image sizes ==="
                 docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | grep smartfalleh || true
+                
+                echo ""
+                echo "=== Build Summary ==="
+                BACKEND_BUILD=$(docker images | grep -c "smartfalleh.*backend-${BUILD_NUMBER}") || true
+                FRONTEND_BUILD=$(docker images | grep -c "smartfalleh.*frontend-${BUILD_NUMBER}") || true
+                
+                echo "Backend build: $([ "$BACKEND_BUILD" -gt 0 ] && echo "✅ SUCCESS" || echo "❌ FAILED")"
+                echo "Frontend build: $([ "$FRONTEND_BUILD" -gt 0 ] && echo "✅ SUCCESS" || echo "⚠️ FAILED/SKIPPED")"
+                
+                if [ "$BACKEND_BUILD" -eq 0 ]; then
+                    echo "❌ Critical: Backend build failed, cannot continue"
+                    exit 1
+                fi
             '''
         }
     }
