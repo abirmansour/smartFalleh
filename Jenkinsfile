@@ -65,6 +65,16 @@ pipeline {
     }
     
     stages {
+        stage('Clean Workspace') {
+            steps {
+                cleanWs()
+                sh '''
+                    echo "Cleaning Docker resources..."
+                    docker system prune -f 2>/dev/null || true
+                    echo "Workspace cleaned"
+                '''
+            }
+        }
         stage('Checkout') {
             steps {
                 retry(3) {
@@ -88,6 +98,37 @@ pipeline {
                 }
             }
         }
+
+        stage('Fix Docker Permissions') {
+    steps {
+        script {
+            sh '''
+                echo "=== Fixing Docker Permissions ==="
+                
+                # Add jenkins user to docker group
+                sudo usermod -aG docker jenkins 2>/dev/null || true
+                
+                # Fix docker socket permissions
+                if [ -S /var/run/docker.sock ]; then
+                    echo "Fixing /var/run/docker.sock permissions..."
+                    sudo chown root:docker /var/run/docker.sock 2>/dev/null || true
+                    sudo chmod 666 /var/run/docker.sock 2>/dev/null || true
+                fi
+                
+                # Restart docker service
+                sudo systemctl restart docker 2>/dev/null || sudo service docker restart 2>/dev/null || true
+                
+                # Wait for docker to start
+                sleep 5
+                
+                # Test docker
+                docker info || echo "Docker might still have permission issues"
+                
+                echo "Docker permissions fixed"
+            '''
+        }
+    }
+}
 
       stage('Setup Environment') {
     steps {
