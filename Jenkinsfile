@@ -65,16 +65,6 @@ pipeline {
     }
     
     stages {
-        stage('Clean Workspace') {
-            steps {
-                cleanWs()
-                sh '''
-                    echo "Cleaning Docker resources..."
-                    docker system prune -f 2>/dev/null || true
-                    echo "Workspace cleaned"
-                '''
-            }
-        }
         stage('Checkout') {
             steps {
                 retry(3) {
@@ -98,74 +88,6 @@ pipeline {
                 }
             }
         }
-
-        stage('Force Docker Unix Socket') {
-    steps {
-        script {
-            sh '''
-                echo "=== FORCING DOCKER TO USE UNIX SOCKET ==="
-                
-                # 1. Set DOCKER_HOST environment variable (MOST IMPORTANT)
-                export DOCKER_HOST="unix:///var/run/docker.sock"
-                
-                # 2. Make it available for all subsequent stages
-                echo "export DOCKER_HOST=unix:///var/run/docker.sock" > /tmp/docker_fix.sh
-                cat /tmp/docker_fix.sh >> $WORKSPACE/.bashrc
-                
-                # 3. Fix socket permissions if it exists
-                if [ -S /var/run/docker.sock ]; then
-                    echo "Docker socket found, fixing permissions..."
-                    sudo chmod 666 /var/run/docker.sock 2>/dev/null || true
-                fi
-                
-                # 4. Test the connection
-                echo "Testing Docker connection with Unix socket..."
-                if docker -H unix:///var/run/docker.sock info >/dev/null 2>&1; then
-                    echo "✅ SUCCESS: Docker now using Unix socket"
-                else
-                    echo "❌ WARNING: Docker still not working with Unix socket"
-                    echo "Will try alternative methods in later stages..."
-                fi
-            '''
-            
-            
-            env.DOCKER_HOST = "unix:///var/run/docker.sock"
-
-             env.PATH = "${env.PATH}:/usr/bin"
-        }
-    }
-}
-
-        stage('Fix Docker Permissions') {
-    steps {
-        script {
-            sh '''
-                echo "=== Fixing Docker Permissions ==="
-                
-                # Add jenkins user to docker group
-                sudo usermod -aG docker jenkins 2>/dev/null || true
-                
-                # Fix docker socket permissions
-                if [ -S /var/run/docker.sock ]; then
-                    echo "Fixing /var/run/docker.sock permissions..."
-                    sudo chown root:docker /var/run/docker.sock 2>/dev/null || true
-                    sudo chmod 666 /var/run/docker.sock 2>/dev/null || true
-                fi
-                
-                # Restart docker service
-                sudo systemctl restart docker 2>/dev/null || sudo service docker restart 2>/dev/null || true
-                
-                # Wait for docker to start
-                sleep 5
-                
-                # Test docker
-                docker info || echo "Docker might still have permission issues"
-                
-                echo "Docker permissions fixed"
-            '''
-        }
-    }
-}
 
       stage('Setup Environment') {
     steps {
@@ -394,131 +316,82 @@ ENDOFFILE
             }
         }
 
+        
+
        stage('Setup Minikube Environment') {
     steps {
         script {
-            sh '''
-                echo "=== Setting up Minikube Environment ==="
-                
-                # 1. FIX DOCKER FIRST - FORCE UNIX SOCKET
-                echo "1. Ensuring Docker is running with Unix socket..."
-                
-                # CRITICAL: Force Docker to use Unix socket
-                export DOCKER_HOST="unix:///var/run/docker.sock"
-                echo "   Using DOCKER_HOST: $DOCKER_HOST"
-                
-                # Fix socket permissions
-                if [ -S /var/run/docker.sock ]; then
-                    echo "   Docker socket found, fixing permissions..."
-                    sudo chmod 666 /var/run/docker.sock 2>/dev/null || true
-                else
-                    echo "   ⚠️ Docker socket not found, looking for alternatives..."
-                    find / -name "*.sock" -type s 2>/dev/null | grep -i docker | head -3
-                fi
-                
-                # Start Docker if not running
-                echo "   Checking Docker daemon..."
-                if ! docker -H unix:///var/run/docker.sock info >/dev/null 2>&1; then
-                    echo "   Starting Docker service..."
-                    sudo service docker start 2>/dev/null || true
-                    sudo systemctl start docker 2>/dev/null || true
+            try {
+                // Run the setup and capture output
+                def minikubeOutput = sh(script: '''
+                    # 1. Create all necessary directories
+                    LOCAL_BIN="$HOME/.local/bin"
+                    KUBE_DIR="$HOME/.kube"
+                    mkdir -p $LOCAL_BIN
+                    mkdir -p $KUBE_DIR
+                    export PATH=$LOCAL_BIN:$PATH
                     
-                    # Wait for Docker to start
-                    sleep 10
-                    
-                    # Test Docker with Unix socket explicitly
-                    if docker -H unix:///var/run/docker.sock info >/dev/null 2>&1; then
-                        echo "   ✅ Docker is working via Unix socket"
+                    # 2. Install Minikube if needed
+                    if ! command -v minikube &> /dev/null; then
+                        echo "Installing Minikube..."
+                        curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+                        chmod +x minikube-linux-amd64
+                        mv minikube-linux-amd64 $LOCAL_BIN/minikube
                     else
-                        echo "   ⚠️ Docker still not accessible via Unix socket"
-                        echo "   Trying direct Docker daemon start..."
-                        
-                        # Start docker daemon manually
-                        if command -v dockerd >/dev/null 2>&1; then
-                            echo "   Starting dockerd directly..."
-                            nohup dockerd --host=unix:///var/run/docker.sock > /tmp/dockerd.log 2>&1 &
-                            sleep 5
-                        fi
+                        echo "minikube already installed"
                     fi
-                else
-                    echo "   ✅ Docker is working via Unix socket"
-                fi
+                    
+                    # 3. Start Minikube if not running
+                    if ! minikube status | grep -q "Running"; then
+                        echo "=== Starting Minikube ==="
+                        minikube start \\
+                            --driver=docker \\
+                            --memory=4096 \\
+                            --cpus=2 \\
+                            --force \\
+                            --delete-on-failure \\
+                            --wait=all \\
+                            --wait-timeout=5m \\
+                            --interactive=false
+                    fi
+                    
+                    # 4. Get Minikube IP
+                    MINIKUBE_IP=$(minikube ip 2>/dev/null || echo "127.0.0.1")
+                    echo "MINIKUBE_IP=$MINIKUBE_IP"
+                    
+                    # 5. Configure kubectl
+                    minikube update-context 2>/dev/null || true
+                    kubectl config use-context minikube 2>/dev/null || true
+                    
+                    echo "MINIKUBE_IP=$MINIKUBE_IP"
+                ''', returnStdout: true).trim()
                 
-                # 2. Install/update kubectl if needed
-                echo "2. Setting up kubectl..."
-                mkdir -p $HOME/.local/bin
-                export PATH=$HOME/.local/bin:$PATH
+                // Extract MINIKUBE_IP from output
+                def minikubeIP = "127.0.0.1"
+                def lines = minikubeOutput.split('\n')
+                for (line in lines) {
+                    if (line.startsWith('MINIKUBE_IP=')) {
+                        minikubeIP = line.replace('MINIKUBE_IP=', '')
+                        break
+                    }
+                }
                 
-                if ! command -v kubectl &> /dev/null; then
-                    echo "   Installing kubectl..."
-                    curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-                    chmod +x kubectl
-                    mv kubectl $HOME/.local/bin/
-                fi
+                // Set environment variable for Jenkins
+                env.MINIKUBE_IP = minikubeIP
+                env.KUBECONFIG = "$HOME/.kube/config"
                 
-                # 3. Install Minikube if not present
-                echo "3. Setting up Minikube..."
-                if ! command -v minikube &> /dev/null; then
-                    echo "   Installing Minikube..."
-                    curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-                    chmod +x minikube-linux-amd64
-                    mv minikube-linux-amd64 $HOME/.local/bin/minikube
-                fi
-                
-                # 4. Clean up any previous Minikube (important!)
-                echo "4. Cleaning up previous Minikube..."
-                minikube delete --all --purge 2>/dev/null || true
-                sleep 3
-                
-                # 5. Start Minikube with Unix socket Docker driver
-                echo "5. Starting Minikube..."
-                echo "   Using: 2048MB RAM, 2 CPUs, Docker driver with Unix socket"
-                
-                # CRITICAL: Start Minikube with explicit Docker host
-                minikube start \
-                    --driver=docker \
-                    --docker-opt="host=unix:///var/run/docker.sock" \
-                    --memory=2048 \
-                    --cpus=2 \
-                    --disk-size=10g \
-                    --wait=all \
-                    --wait-timeout=5m \
-                    --interactive=false \
-                    --extra-config=kubelet.resolv-conf=/run/systemd/resolve/resolv.conf
-                
-                # 6. Configure kubectl context
-                echo "6. Configuring kubectl..."
-                minikube update-context
-                kubectl config use-context minikube
-                
-                # 7. Enable essential addons
-                echo "7. Enabling Minikube addons..."
-                minikube addons enable storage-provisioner 2>/dev/null || true
-                minikube addons enable default-storageclass 2>/dev/null || true
-                
-                # 8. Get and display Minikube IP
-                MINIKUBE_IP=$(minikube ip)
-                echo "MINIKUBE_IP=$MINIKUBE_IP"
-                echo "   ✅ Minikube IP: $MINIKUBE_IP"
-                
-                # 9. Verify everything is working
-                echo "8. Verifying setup..."
-                echo "   Minikube status:"
-                minikube status
-                
-                echo "   Kubernetes nodes:"
-                kubectl get nodes
-                
-                echo ""
                 echo "✅ Minikube environment setup complete!"
-                echo " IP Address: $MINIKUBE_IP"
-                echo " To access your app: http://smartfalleh.local"
-                echo " Add to hosts: $MINIKUBE_IP smartfalleh.local"
-            '''
+                echo "Minikube IP: ${env.MINIKUBE_IP}"
+                
+            } catch (Exception e) {
+                echo "⚠️ Minikube setup failed: ${e.getMessage()}"
+                echo "Continuing with local development setup..."
+                env.MINIKUBE_IP = "127.0.0.1"
+                env.KUBECONFIG = "$HOME/.kube/config"
+            }
         }
     }
 }
-       
         stage('Prepare Kubernetes Files') {
             steps {
                 script {
@@ -1264,8 +1137,7 @@ EOF
         }
     }
 }    
-
-    
+        
         stage('Report to TestRail') {
             steps {
                 script {
