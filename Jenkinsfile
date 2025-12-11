@@ -99,6 +99,43 @@ pipeline {
             }
         }
 
+        stage('Force Docker Unix Socket') {
+    steps {
+        script {
+            sh '''
+                echo "=== FORCING DOCKER TO USE UNIX SOCKET ==="
+                
+                # 1. Set DOCKER_HOST environment variable (MOST IMPORTANT)
+                export DOCKER_HOST="unix:///var/run/docker.sock"
+                
+                # 2. Make it available for all subsequent stages
+                echo "export DOCKER_HOST=unix:///var/run/docker.sock" > /tmp/docker_fix.sh
+                cat /tmp/docker_fix.sh >> $WORKSPACE/.bashrc
+                
+                # 3. Fix socket permissions if it exists
+                if [ -S /var/run/docker.sock ]; then
+                    echo "Docker socket found, fixing permissions..."
+                    sudo chmod 666 /var/run/docker.sock 2>/dev/null || true
+                fi
+                
+                # 4. Test the connection
+                echo "Testing Docker connection with Unix socket..."
+                if docker -H unix:///var/run/docker.sock info >/dev/null 2>&1; then
+                    echo "✅ SUCCESS: Docker now using Unix socket"
+                else
+                    echo "❌ WARNING: Docker still not working with Unix socket"
+                    echo "Will try alternative methods in later stages..."
+                fi
+            '''
+            
+            
+            env.DOCKER_HOST = "unix:///var/run/docker.sock"
+
+             env.PATH = "${env.PATH}:/usr/bin"
+        }
+    }
+}
+
         stage('Fix Docker Permissions') {
     steps {
         script {
@@ -357,33 +394,54 @@ ENDOFFILE
             }
         }
 
-        stage('Setup Minikube Environment') {
+       stage('Setup Minikube Environment') {
     steps {
         script {
             sh '''
                 echo "=== Setting up Minikube Environment ==="
                 
-                # 1. FIX DOCKER FIRST (This is your main issue!)
-                echo "1. Ensuring Docker is running..."
+                # 1. FIX DOCKER FIRST - FORCE UNIX SOCKET
+                echo "1. Ensuring Docker is running with Unix socket..."
                 
-                # Method 1: Check Docker socket permissions
+                # CRITICAL: Force Docker to use Unix socket
+                export DOCKER_HOST="unix:///var/run/docker.sock"
+                echo "   Using DOCKER_HOST: $DOCKER_HOST"
+                
+                # Fix socket permissions
                 if [ -S /var/run/docker.sock ]; then
-                    echo "   Docker socket found, checking permissions..."
+                    echo "   Docker socket found, fixing permissions..."
                     sudo chmod 666 /var/run/docker.sock 2>/dev/null || true
+                else
+                    echo "   ⚠️ Docker socket not found, looking for alternatives..."
+                    find / -name "*.sock" -type s 2>/dev/null | grep -i docker | head -3
                 fi
                 
-                # Method 2: Try to start Docker service
-                sudo service docker start 2>/dev/null || true
-                sudo systemctl start docker 2>/dev/null || true
-                
-                # Wait a bit for Docker
-                sleep 5
-                
-                # Test Docker
-                if docker info >/dev/null 2>&1; then
-                    echo "   ✅ Docker is working"
+                # Start Docker if not running
+                echo "   Checking Docker daemon..."
+                if ! docker -H unix:///var/run/docker.sock info >/dev/null 2>&1; then
+                    echo "   Starting Docker service..."
+                    sudo service docker start 2>/dev/null || true
+                    sudo systemctl start docker 2>/dev/null || true
+                    
+                    # Wait for Docker to start
+                    sleep 10
+                    
+                    # Test Docker with Unix socket explicitly
+                    if docker -H unix:///var/run/docker.sock info >/dev/null 2>&1; then
+                        echo "   ✅ Docker is working via Unix socket"
+                    else
+                        echo "   ⚠️ Docker still not accessible via Unix socket"
+                        echo "   Trying direct Docker daemon start..."
+                        
+                        # Start docker daemon manually
+                        if command -v dockerd >/dev/null 2>&1; then
+                            echo "   Starting dockerd directly..."
+                            nohup dockerd --host=unix:///var/run/docker.sock > /tmp/dockerd.log 2>&1 &
+                            sleep 5
+                        fi
+                    fi
                 else
-                    echo "   ⚠️ Docker issues detected, but continuing..."
+                    echo "   ✅ Docker is working via Unix socket"
                 fi
                 
                 # 2. Install/update kubectl if needed
@@ -412,18 +470,19 @@ ENDOFFILE
                 minikube delete --all --purge 2>/dev/null || true
                 sleep 3
                 
-                # 5. Start Minikube with OPTIMAL settings
+                # 5. Start Minikube with Unix socket Docker driver
                 echo "5. Starting Minikube..."
-                echo "   Using: 2048MB RAM, 2 CPUs"
+                echo "   Using: 2048MB RAM, 2 CPUs, Docker driver with Unix socket"
                 
-                # CRITICAL: Use these exact parameters
+                # CRITICAL: Start Minikube with explicit Docker host
                 minikube start \
                     --driver=docker \
+                    --docker-opt="host=unix:///var/run/docker.sock" \
                     --memory=2048 \
                     --cpus=2 \
                     --disk-size=10g \
                     --wait=all \
-                    --wait-timeout=3m \
+                    --wait-timeout=5m \
                     --interactive=false \
                     --extra-config=kubelet.resolv-conf=/run/systemd/resolve/resolv.conf
                 
@@ -455,7 +514,6 @@ ENDOFFILE
                 echo " IP Address: $MINIKUBE_IP"
                 echo " To access your app: http://smartfalleh.local"
                 echo " Add to hosts: $MINIKUBE_IP smartfalleh.local"
-                
             '''
         }
     }
