@@ -316,7 +316,47 @@ ENDOFFILE
             }
         }
 
-        
+stage('Fix Docker and Clean Minikube') {
+    steps {
+        script {
+            sh '''
+                echo "=== Cleaning up and fixing Docker ==="
+                
+                # 1. Stop and clean minikube completely
+                echo "1. Cleaning Minikube..."
+                minikube delete --all --purge 2>/dev/null || true
+                sudo rm -rf ~/.minikube 2>/dev/null || true
+                sudo rm -rf ~/.kube 2>/dev/null || true
+                
+                # 2. Clean Docker
+                echo "2. Cleaning Docker..."
+                docker system prune -af 2>/dev/null || true
+                
+                # 3. Fix Docker socket (simple approach)
+                echo "3. Fixing Docker socket..."
+                sudo chmod 666 /var/run/docker.sock 2>/dev/null || true
+                
+                # 4. Restart Docker service
+                echo "4. Restarting Docker..."
+                sudo service docker restart 2>/dev/null || sudo systemctl restart docker 2>/dev/null || true
+                sleep 10
+                
+                # 5. Test Docker
+                echo "5. Testing Docker..."
+                if docker info >/dev/null 2>&1; then
+                    echo "✅ Docker is working"
+                else
+                    echo "❌ Docker not working, trying alternative..."
+                    # Start Docker daemon directly
+                    dockerd --host=unix:///var/run/docker.sock --host=tcp://localhost:2375 &
+                    sleep 10
+                fi
+                
+                echo "Cleanup complete"
+            '''
+        }
+    }
+}
 
        stage('Setup Minikube Environment') {
     steps {
@@ -1137,6 +1177,7 @@ EOF
         }
     }
 }    
+
         
         stage('Report to TestRail') {
             steps {
