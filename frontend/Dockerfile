@@ -17,12 +17,8 @@ RUN npm config set registry https://registry.npmjs.org/ \
     && npm config set prefer-offline true
 
 # 3. Clean npm cache and install dependencies with multiple fallbacks
-RUN npm cache clean --force \
-    && (npm ci --no-audit --no-fund --no-progress || \
-        (echo "npm ci failed, trying npm install..." && \
-         npm install --legacy-peer-deps --no-audit --no-fund --no-progress) || \
-        (echo "Installation still failing, trying offline mode..." && \
-         npm ci --prefer-offline --no-audit --no-fund --no-progress))
+RUN npm cache clean --force && \
+    npm install --legacy-peer-deps --no-audit --no-fund --no-progress
 
 # 4. Verify critical dependencies are installed
 RUN npm list react-icons || npm install react-icons@latest --no-audit --no-fund --no-progress
