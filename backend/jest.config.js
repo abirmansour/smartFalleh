@@ -8,7 +8,7 @@ export default {
   collectCoverageFrom: ['src/**/*.(t|j)s'],
   coverageDirectory: './coverage',
   testEnvironment: 'node',
-  moduleNameMapping: { 
+  moduleNameMapper: { 
     '^src/(.*)$': '<rootDir>/src/$1',
   },
   reporters: [

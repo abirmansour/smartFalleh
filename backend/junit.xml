@@ -1,3 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="Backend Tests" tests="0" failures="0" errors="0" time="2.09">
+<testsuites name="Backend Tests" tests="7" failures="0" errors="0" time="2.333">
+  <testsuite name="UsersController (Functional)" errors="0" failures="0" skipped="0" timestamp="2025-12-07T17:51:11" time="2.031" tests="7">
+    <testcase classname="UsersController (Functional)" name="/users (GET) should return all users" time="0.036">
+    </testcase>
+    <testcase classname="UsersController (Functional)" name="/users/:uid (GET) should return one user" time="0.005">
+    </testcase>
+    <testcase classname="UsersController (Functional)" name="/users (POST) should create a user" time="0.023">
+    </testcase>
+    <testcase classname="UsersController (Functional)" name="/users/:uid (PATCH) should update a user" time="0.009">
+    </testcase>
+    <testcase classname="UsersController (Functional)" name="/users/:uid (DELETE) should delete a user" time="0.006">
+    </testcase>
+    <testcase classname="UsersController (Functional)" name="/users/request-password-reset (POST) should request reset" time="0.005">
+    </testcase>
+    <testcase classname="UsersController (Functional)" name="/users/reset-password (POST) should reset password" time="0.005">
+    </testcase>
+  </testsuite>
 </testsuites>

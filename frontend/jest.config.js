@@ -4,7 +4,7 @@ export default {
     '^.+\\.(js|jsx)$': 'babel-jest',
   },
   setupFilesAfterEnv: ['<rootDir>/src/setupTests.js'],
-  moduleNameMapping: {
+  moduleNameMapper: {  // <-- corrigé ici
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
   },
   reporters: [

@@ -1,17 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="Frontend Tests" tests="6" failures="0" errors="0" time="1.23">
-  <testsuite name="ATDD - Gestion des demandes agricoles" errors="0" failures="0" skipped="0" timestamp="2025-11-30T08:31:03" time="0.715" tests="6">
-    <testcase classname="ATDD - Gestion des demandes agricoles" name="AGRIC 1: Échec création demande avec champs obligatoires vides" time="0.004">
+<testsuites name="Frontend Tests" tests="10" failures="0" errors="0" time="2.911">
+  <testsuite name="ATDD - Gestion des demandes agricoles" errors="0" failures="0" skipped="0" timestamp="2025-12-07T16:02:54" time="1.041" tests="6">
+    <testcase classname="ATDD - Gestion des demandes agricoles" name="AGRIC 1: Échec création demande avec champs obligatoires vides" time="0.007">
     </testcase>
-    <testcase classname="ATDD - Gestion des demandes agricoles" name="AGRIC 2: Création demande valide envoie email et notifie admin" time="0.001">
+    <testcase classname="ATDD - Gestion des demandes agricoles" name="AGRIC 2: Création demande valide envoie email et notifie admin" time="0.002">
     </testcase>
-    <testcase classname="ATDD - Gestion des demandes agricoles" name="ADMIN 1: Filtrage demandes avec plus de 20 vaches" time="0.002">
+    <testcase classname="ATDD - Gestion des demandes agricoles" name="ADMIN 1: Filtrage demandes avec plus de 20 vaches" time="0.003">
     </testcase>
     <testcase classname="ATDD - Gestion des demandes agricoles" name="ADMIN 2: Approbation demande et assignation au jury" time="0.001">
     </testcase>
     <testcase classname="ATDD - Gestion des demandes agricoles" name="JURY 1: Échec soumission formulaire évaluation avec champs vides" time="0.001">
     </testcase>
     <testcase classname="ATDD - Gestion des demandes agricoles" name="JURY 2: Évaluation favorable et envoi lien mobile" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="undefined" errors="0" failures="0" skipped="0" timestamp="2025-12-07T16:02:54" time="1.154" tests="1">
+    <testcase classname="" name="renders app" time="0.037">
+    </testcase>
+  </testsuite>
+  <testsuite name="LoginPage2" errors="0" failures="0" skipped="0" timestamp="2025-12-07T16:02:54" time="1.494" tests="3">
+    <testcase classname="LoginPage2" name="renders email and password inputs and login button" time="0.046">
+    </testcase>
+    <testcase classname="LoginPage2" name="shows error message if login fails" time="0.027">
+    </testcase>
+    <testcase classname="LoginPage2" name="navigates to dashboard if login succeeds" time="0.024">
     </testcase>
   </testsuite>
 </testsuites>

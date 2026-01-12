@@ -1,0 +1,24 @@
+config:
+  target: "http://localhost:3000"   # ton backend NestJS
+  phases:
+  - duration: 60        # 60 secondes
+    arrivalRate: 20     # 20 requêtes par seconde
+
+scenarios:
+  - name: "Test simple: GET all users"
+    flow:
+      - get:
+          url: "/users"
+          headers:
+            Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFkbWluQGdtYWlsLmNvbSIsInJvbGUiOiJhZG1pbiIsInN1YiI6ImlkLWRlLWx1dGlsaXNhdGV1ciIsImlhdCI6MTc2NTUzNzcxNywiZXhwIjoxNzY1NTQxMzE3fQ.Yvi1nhVJR9OFxu7p-YiyLWV3GnP8behEtfKzE36Z_9c"
+
+  - name: "Test simple: create user"
+    flow:
+    - post:
+        url: "/users"
+        json:
+          email: "perf_{{ $randomInt }}@mail.com"
+          nom: "Perf"
+          prenom: "Test"
+        headers:
+            Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFkbWluQGdtYWlsLmNvbSIsInJvbGUiOiJhZG1pbiIsInN1YiI6ImlkLWRlLWx1dGlsaXNhdGV1ciIsImlhdCI6MTc2NTUzNzcxNywiZXhwIjoxNzY1NTQxMzE3fQ.Yvi1nhVJR9OFxu7p-YiyLWV3GnP8behEtfKzE36Z_9c"

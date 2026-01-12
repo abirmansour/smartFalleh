@@ -34,7 +34,13 @@ export class UsersService {
     // 🧩 Générer mot de passe temporaire si non fourni
     const tempPassword = rest.password || 'Temp@123';
     const hashedPassword = await bcrypt.hash(tempPassword, 10);
-
+     const existingUser = await this.userRepository.findOne({
+      where: { email: createUserDto.email },
+    });
+    
+    if (existingUser) {
+      throw new BadRequestException('Un utilisateur avec cet email existe déjà.');
+    }
     // 👤 Création de l'utilisateur
     const user = this.userRepository.create({
       ...rest,
@@ -104,7 +110,32 @@ export class UsersService {
     delete (savedUser as any).password;
     return savedUser;
   }
+async createUser(userData: {
+    email: string;
+    password?: string;
+    nom: string;
+    prenom: string;
+  }) {
+    const existingUser = await this.userRepository.findOne({ where: { email: userData.email } });
+    if (existingUser) throw new BadRequestException('Email déjà utilisé');
 
+    const password = userData.password || 'Temp@123';
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = this.userRepository.create({
+      ...userData,
+      password: hashedPassword,
+    });
+
+    const savedUser = await this.userRepository.save(user);
+
+    // Envoi email simple
+    await this.mailService.sendVerificationEmail(savedUser.email, 'Lien fictif', 'http://localhost:3000');
+
+
+    delete (savedUser as any).password; // enlever password avant de retourner
+    return savedUser;
+  }
   // 🔁 Demande de réinitialisation du mot de passe
   async requestPasswordReset(email: string) {
     const user = await this.userRepository.findOne({ where: { email } });

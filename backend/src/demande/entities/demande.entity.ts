@@ -50,8 +50,9 @@ export class Demande {
   @Column({ type: 'boolean', nullable: true })
   eligible?: boolean;
 
-  @Column({ type: 'timestamp', nullable: true })
-  validatedAt?: Date;
+  @Column({ type: 'datetime', nullable: true })
+validatedAt?: Date;
+
 
   @Column({ nullable: true })
   validatedBy?: string;
