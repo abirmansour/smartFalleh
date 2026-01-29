@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/chat_message.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -17,10 +18,73 @@ class _ChatScreenState extends State<ChatScreen> {
   final List<ChatMessage> _messages = [];
   final ScrollController _scrollController = ScrollController();
   bool _isLoading = false;
+  static const String _chatHistoryKey = 'chat_history';
 
   // updated with deployed Worker URL
   static const String _workerUrl =
       'https://gentle-cake-97fd.forstek.workers.dev/chat';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadChatHistory();
+  }
+
+  Future<void> _loadChatHistory() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final chatHistoryJson = prefs.getString(_chatHistoryKey);
+
+      if (chatHistoryJson != null) {
+        final List<dynamic> chatHistoryData = json.decode(chatHistoryJson);
+        setState(() {
+          _messages.clear();
+          for (final messageData in chatHistoryData) {
+            _messages.add(
+              ChatMessage(
+                text: messageData['text'],
+                isUser: messageData['isUser'],
+                timestamp: DateTime.parse(messageData['timestamp']),
+              ),
+            );
+          }
+        });
+      }
+    } catch (e) {
+      print('Error loading chat history: $e');
+    }
+  }
+
+  Future<void> _saveChatHistory() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final chatHistoryData = _messages
+          .map(
+            (msg) => {
+              'text': msg.text,
+              'isUser': msg.isUser,
+              'timestamp': msg.timestamp.toIso8601String(),
+            },
+          )
+          .toList();
+
+      await prefs.setString(_chatHistoryKey, json.encode(chatHistoryData));
+    } catch (e) {
+      print('Error saving chat history: $e');
+    }
+  }
+
+  Future<void> _clearChatHistory() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_chatHistoryKey);
+      setState(() {
+        _messages.clear();
+      });
+    } catch (e) {
+      print('Error clearing chat history: $e');
+    }
+  }
 
   Future<void> _sendMessage() async {
     if (_messageController.text.trim().isEmpty) return;
@@ -39,8 +103,12 @@ class _ChatScreenState extends State<ChatScreen> {
 
     try {
       final conversationHistory = _messages
-          .where((msg) => !msg.isUser)
-          .map((msg) => {'role': 'assistant', 'content': msg.text})
+          .map(
+            (msg) => {
+              'role': msg.isUser ? 'user' : 'assistant',
+              'content': msg.text,
+            },
+          )
           .toList();
 
       final response = await http.post(
@@ -80,6 +148,7 @@ class _ChatScreenState extends State<ChatScreen> {
       });
     }
 
+    await _saveChatHistory();
     _scrollToBottom();
   }
 
@@ -143,6 +212,11 @@ class _ChatScreenState extends State<ChatScreen> {
                   IconButton(
                     onPressed: widget.onClose,
                     icon: const Icon(Icons.close, color: Colors.white),
+                  ),
+                  IconButton(
+                    onPressed: _clearChatHistory,
+                    icon: const Icon(Icons.clear_all, color: Colors.white),
+                    tooltip: 'Clear chat history',
                   ),
                 ],
               ),

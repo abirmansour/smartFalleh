@@ -58,7 +58,7 @@ class _ChatBotWrapperState extends State<ChatBotWrapper> {
             ),
           ),
 
-          // Chat screen (overlay)
+          // chat screen (overlay)
           if (_isChatOpen)
             Positioned.fill(
               child: Container(
@@ -67,16 +67,21 @@ class _ChatBotWrapperState extends State<ChatBotWrapper> {
               ),
             ),
 
-          // floating robot button
-          Positioned(
-            bottom: 24,
-            right: 24,
-            child: FloatingActionButton(
-              onPressed: _toggleChat,
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              child: const Icon(Icons.smart_toy, size: 28, color: Colors.white),
+          // floating robot button (only show when chat is closed)
+          if (!_isChatOpen)
+            Positioned(
+              bottom: 24,
+              right: 24,
+              child: FloatingActionButton(
+                onPressed: _toggleChat,
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                child: const Icon(
+                  Icons.smart_toy,
+                  size: 28,
+                  color: Colors.white,
+                ),
+              ),
             ),
-          ),
         ],
       ),
     );
