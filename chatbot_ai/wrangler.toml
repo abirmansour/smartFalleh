@@ -1,0 +1,7 @@
+name = "gentle-cake-97fd"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+[ai]
+binding = "AI"
+remote = true
